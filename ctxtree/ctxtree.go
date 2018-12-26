@@ -165,9 +165,9 @@ func (c *Ctx) Len() int {
 	return c.totUser + c.totStd
 }
 
-func (c *Ctx) VisitKeyValues(v Visitor) {
+func (c *Ctx) VisitKeyValues(v Visitor) error {
 	view := newView(c, c.mode&fieldsClosure == 0)
-	view.VisitKeyValues(v)
+	return view.VisitKeyValues(v)
 }
 
 func (c *Ctx) VisitStructured(v Visitor) error {
@@ -181,7 +181,7 @@ func newView(ctx *Ctx, localOnly bool) *view {
 	return v
 }
 
-func (view *view) VisitKeyValues(v Visitor) {
+func (view *view) VisitKeyValues(v Visitor) error {
 	o := &view.order
 	L := o.Len()
 
@@ -201,8 +201,12 @@ func (view *view) VisitKeyValues(v Visitor) {
 			}
 		}
 
-		v.OnValue(key, fld.Value)
+		if err := v.OnValue(key, fld.Value); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (view *view) VisitStructured(v Visitor) error {
