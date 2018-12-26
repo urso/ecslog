@@ -15,6 +15,7 @@ import (
 )
 
 type Logger struct {
+	fields   *ctxtree.Ctx
 	out      Output
 	types    *gotype.Iterator
 	typeOpts []gotype.Option
@@ -55,14 +56,18 @@ type multiErr struct {
 	errs []error
 }
 
-func New(out Output, opts ...gotype.Option) (*Logger, error) {
+func New(out Output, fields []fld.Field, opts ...gotype.Option) (*Logger, error) {
 	unfolder := out.Visitor()
 	types, err := gotype.NewIterator(unfolder, opts...)
 	if err != nil {
 		return nil, err
 	}
 
+	logCtx := ctxtree.New(nil, nil)
+	logCtx.AddFields(fields)
+
 	return &Logger{
+		fields:   logCtx,
 		out:      out,
 		types:    types,
 		typeOpts: opts,
@@ -142,10 +147,17 @@ func (l *Logger) Log(
 		ctx.AddField(fld.Any("error.causes", multiErr{errors}))
 	}
 
+	// link predefined fields
+	if l.fields.Len() > 0 {
+		ctx = ctxtree.New(l.fields, ctx)
+	}
+
 	v := structVisitor{l}
+	l.out.Begin()
 	if err := v.Process(ctx); err != nil {
 		l.reset()
 	}
+	l.out.End()
 }
 
 func buildErrCtx(err error) (errCtx ctxtree.Ctx) {
