@@ -175,30 +175,38 @@ func level(l backend.Level) string {
 	}
 }
 
-func (p *ctxPrinter) OnObjStart(key string) {
-	p.onKey(key)
-	p.log.buf.WriteRune('{')
+func (p *ctxPrinter) OnObjStart(key string) error {
+	if err := p.onKey(key); err != nil {
+		return err
+	}
+	_, err := p.log.buf.WriteRune('{')
+	return err
 }
 
-func (p *ctxPrinter) OnObjEnd() {
-	p.log.buf.WriteRune('}')
+func (p *ctxPrinter) OnObjEnd() error {
+	_, err := p.log.buf.WriteRune('}')
+	return err
 }
 
-func (p *ctxPrinter) OnValue(key string, v fld.Value) {
+func (p *ctxPrinter) OnValue(key string, v fld.Value) (err error) {
 	p.onKey(key)
 	v.Reporter.Ifc(&v, func(value interface{}) {
 		switch v := value.(type) {
 		case *ctxtree.Ctx:
 			p.log.buf.WriteRune('{')
-			v.VisitKeyValues(p)
+			err = v.VisitKeyValues(p)
 			p.log.buf.WriteRune('}')
+		case string, []byte:
+			fmt.Fprintf(&p.log.buf, "%q", v)
 		default:
 			fmt.Fprintf(&p.log.buf, "%v", v)
 		}
 	})
+
+	return err
 }
 
-func (p *ctxPrinter) onKey(key string) {
+func (p *ctxPrinter) onKey(key string) error {
 	if p.n > 0 {
 		p.log.buf.WriteRune(' ')
 	} else {
@@ -207,6 +215,7 @@ func (p *ctxPrinter) onKey(key string) {
 	p.log.buf.WriteString(key)
 	p.log.buf.WriteRune('=')
 	p.n++
+	return nil
 }
 
 func (wo *writerOutput) Enabled(lvl backend.Level) bool { return lvl >= wo.lvl }
