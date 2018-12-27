@@ -49,7 +49,9 @@ func main() {
 				objlog.Call(backend.Trace, func(obj map[string]interface{}) {
 					spew.Dump(obj)
 				}),
-				nil,
+				[]fld.Field{
+					structlog.DynTimestamp(time.RFC3339Nano),
+				},
 			)
 			if err != nil {
 				panic(err)
