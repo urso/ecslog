@@ -28,6 +28,7 @@ type Type uint8
 
 const (
 	IfcType Type = iota
+	IntType
 	Int64Type
 	Uint64Type
 	Float64Type
@@ -41,7 +42,19 @@ func userField(k string, v Value) Field {
 }
 
 func Int(key string, i int) Field { return userField(key, ValInt(i)) }
-func ValInt(i int) Value          { return ValInt64(int64(i)) }
+func ValInt(i int) Value          { return Value{Primitive: uint64(i), Reporter: _intReporter} }
+
+type intReporter struct{}
+
+var _intReporter Reporter = intReporter{}
+
+func (intReporter) Type() Type {
+	return IntType
+}
+
+func (intReporter) Ifc(v *Value, fn func(interface{})) {
+	fn(int(v.Primitive))
+}
 
 func Int64(key string, i int64) Field { return userField(key, ValInt64(i)) }
 func ValInt64(i int64) Value          { return Value{Primitive: uint64(i), Reporter: _int64Reporter} }
