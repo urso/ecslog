@@ -101,7 +101,14 @@ func (p *printer) printf(msg string, vs []interface{}) int {
 				p.cb("", argIdx, arg)
 			}
 
-			fmt.Fprintf(p, format, arg)
+			// handle field values being passed:
+			if fld, ok := arg.(Field); ok {
+				p.cb("", argIdx, arg)
+				fmt.Fprintf(p, format, fld.Value.Interface())
+			} else {
+				fmt.Fprintf(p, format, arg)
+			}
+
 			i = next
 			argIdx++
 			continue
@@ -127,8 +134,13 @@ func (p *printer) printf(msg string, vs []interface{}) int {
 			arg = args[argIdx]
 		}
 
-		p.format(prefix, pattern, arg)
-		p.cb(key, argIdx, arg)
+		if fld, ok := arg.(Field); ok {
+			p.format(prefix, pattern, fld.Value.Interface())
+			p.cb("", argIdx, fld)
+		} else {
+			p.format(prefix, pattern, arg)
+			p.cb(key, argIdx, arg)
+		}
 		argIdx++
 
 		// continue after current property
