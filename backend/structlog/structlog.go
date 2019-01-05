@@ -82,10 +82,12 @@ func (l *Logger) reset() {
 	l.types, _ = gotype.NewIterator(unfolder, l.typeOpts...)
 }
 
+func (l *Logger) For(name string) backend.Backend  { return l }
 func (l *Logger) IsEnabled(lvl backend.Level) bool { return l.out.Enabled(lvl) }
 func (l *Logger) UseContext() bool                 { return true }
 
 func (l *Logger) Log(
+	name string,
 	lvl backend.Level,
 	caller backend.Caller,
 	msg string, fields ctxtree.Ctx,
@@ -110,6 +112,9 @@ func (l *Logger) Log(
 
 		ecs.Message(msg),
 	})
+	if name != "" {
+		ctx.AddField(ecs.Log.Name(name))
+	}
 
 	if userCtx.Len() > 0 {
 		ctx.AddField(fld.Any("fields", &userCtx))

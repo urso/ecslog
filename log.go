@@ -10,6 +10,7 @@ import (
 
 type Logger struct {
 	ctx     ctxtree.Ctx
+	name    string
 	backend backend.Backend
 }
 
@@ -25,12 +26,21 @@ const (
 func New(backend backend.Backend) *Logger {
 	return &Logger{
 		ctx:     ctxtree.Make(nil, nil),
+		name:    "",
 		backend: backend,
 	}
 }
 
 func (l *Logger) IsEnabled(lvl Level) bool {
 	return l.backend.IsEnabled(lvl)
+}
+
+func (l *Logger) Named(name string) *Logger {
+	return &Logger{
+		ctx:     ctxtree.Make(&l.ctx, nil),
+		backend: l.backend.For(name),
+		name:    name,
+	}
 }
 
 func (l *Logger) With(args ...interface{}) *Logger {
@@ -111,7 +121,7 @@ func (l *Logger) logMsgCtx(lvl Level, skip int, msg string, args []interface{}) 
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(lvl, backend.GetCaller(skip+1), msg, ctx, causes)
+	l.backend.Log(l.name, lvl, backend.GetCaller(skip+1), msg, ctx, causes)
 }
 
 func ensureKey(key string, idx int) string {
@@ -135,5 +145,5 @@ func (l *Logger) logMsg(lvl Level, skip int, msg string, args []interface{}) {
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(lvl, backend.GetCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+	l.backend.Log(l.name, lvl, backend.GetCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
 }
