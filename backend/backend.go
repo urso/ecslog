@@ -3,10 +3,12 @@ package backend
 import "github.com/urso/ecslog/ctxtree"
 
 type Backend interface {
+	For(name string) Backend
+
 	IsEnabled(lvl Level) bool
 	UseContext() bool
 
-	Log(lvl Level, caller Caller, msg string, ctx ctxtree.Ctx, causes []error)
+	Log(name string, lvl Level, caller Caller, msg string, ctx ctxtree.Ctx, causes []error)
 }
 
 type Level uint8

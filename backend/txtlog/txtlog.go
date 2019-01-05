@@ -49,10 +49,12 @@ func NewTextBackend(out Output) *Logger {
 	return &Logger{out: out}
 }
 
+func (l *Logger) For(name string) backend.Backend  { return l }
 func (l *Logger) IsEnabled(lvl backend.Level) bool { return l.out.Enabled(lvl) }
 func (l *Logger) UseContext() bool                 { return l.out.WithContext() }
 
 func (l *Logger) Log(
+	name string,
 	lvl backend.Level,
 	caller backend.Caller,
 	msg string, ctx ctxtree.Ctx,
@@ -65,11 +67,16 @@ func (l *Logger) Log(
 
 	ts := time.Now()
 
-	_, err := fmt.Fprintf(&l.buf, "%v %v\t%v:%v\t%v",
-		ts.Format(time.RFC3339), level(lvl), filepath.Base(caller.File()), caller.Line(), msg)
-	if err != nil {
-		return
+	l.buf.WriteString(ts.Format(time.RFC3339))
+	l.buf.WriteByte(' ')
+	l.buf.WriteString(level(lvl))
+	l.buf.WriteByte('\t')
+	if name != "" {
+		fmt.Fprintf(&l.buf, "'%v' - ", name)
 	}
+	fmt.Fprintf(&l.buf, "%v:%d", filepath.Base(caller.File()), caller.Line())
+	l.buf.WriteByte('\t')
+	l.buf.WriteString(msg)
 
 	ctx.VisitKeyValues(&ctxPrinter{log: l})
 	l.buf.WriteRune('\n')
