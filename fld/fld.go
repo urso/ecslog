@@ -37,6 +37,13 @@ const (
 	StringType
 )
 
+func (v *Value) Interface() (ifc interface{}) {
+	v.Reporter.Ifc(v, func(tmp interface{}) {
+		ifc = tmp
+	})
+	return ifc
+}
+
 func userField(k string, v Value) Field {
 	return Field{Key: k, Value: v}
 }
