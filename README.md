@@ -2,6 +2,14 @@
 
 ecslog is an experimental structured logger for the Go programming language.
 
+**TOC**
+- [Structure](#structure)
+- [Concepts](#concepts)
+  * [Fields](#fields)
+  * [Context](#context)
+  * [Capturing Format strings](#capturing-format-strings)
+  * [Errors](#errors)
+
 Aim of this project is to create a type safe logger generating log events which
 are fully compatible to the [Elastic Common Schema
 (ECS)](https://github.com/elastic/ecs). ECS defines a common set of fields for
