@@ -82,6 +82,7 @@ func testWith(title string, log *ecslog.Logger) {
 	log.Error("error message")
 
 	log.Info("with std format string: %v", "test")
+	log.Info("with std format string '%v' and more", "test")
 
 	log.Info("info with %{custom} message", "user")
 	log.Info("info with %{custom} message and number of %{number}", "user", 42)
