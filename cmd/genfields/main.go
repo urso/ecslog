@@ -9,8 +9,8 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"text/template"
 
-	"github.com/alecthomas/template"
 	wordwrap "github.com/mitchellh/go-wordwrap"
 	yaml "gopkg.in/yaml.v2"
 )
