@@ -12,7 +12,6 @@ import (
 type CB func(key string, idx int, val interface{})
 
 type printer struct {
-	cb   CB
 	buf  buffer
 	buf0 [128]byte
 
@@ -86,7 +85,7 @@ func Format(cb CB, msg string, vs ...interface{}) (str string, rest []interface{
 	p := newPrinter(cb)
 	defer p.release()
 
-	str, used := p.printf(msg, vs)
+	str, used := p.printf(cb, msg, vs)
 	if used >= len(vs) {
 		return str, nil
 	}
@@ -109,18 +108,16 @@ func newPrinter(cb CB) *printer {
 }
 
 func (p *printer) init(cb CB) {
-	p.cb = cb
 	p.buf = p.buf0[:0]
 }
 
 func (p *printer) release() {
-	p.cb = nil
 	p.buf = nil
 	p.state = state{}
 	printerPool.Put(p)
 }
 
-func (p *printer) printf(msg string, vs []interface{}) (str string, used int) {
+func (p *printer) printf(cb CB, msg string, vs []interface{}) (str string, used int) {
 	args := argstate{args: vs}
 	st := &p.state
 	i := 0
@@ -159,7 +156,7 @@ func (p *printer) printf(msg string, vs []interface{}) (str string, used int) {
 		}
 
 		if st.flags.named || isErrorValue(arg) || isFieldValue(arg) {
-			p.cb(st.field, argIdx, arg)
+			cb(st.field, argIdx, arg)
 		}
 		p.writeArg(arg, p.state.verb)
 	}
