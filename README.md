@@ -9,6 +9,7 @@ ecslog is an experimental structured logger for the Go programming language.
   * [Context](#context)
   * [Capturing Format strings](#capturing-format-strings)
   * [Errors](#errors)
+- [Use genfields](#use-genfields)
 
 Aim of this project is to create a type safe logger generating log events which
 are fully compatible to the [Elastic Common Schema
@@ -65,7 +66,7 @@ based on these definitions.
 
 ecslog reuses the definitions provided by ECS, so to generate the code for the
 type-safe ECS compatible field constructors (See [tool
-sources](https://github.com/urso/ecslog/tree/master/fld/ecs/internal/cmd/genfields)).
+sources](https://github.com/urso/ecslog/tree/master/cmd/genfields)).
 
 Using the available definitions and tools it is possible to create log events,
 which are normalized and storable into Elasticsearch as is.
@@ -450,3 +451,21 @@ JSON log message:
   }
 }
 ```
+
+
+## Use genfields
+
+The genfields script (found in cmd/genfields) should be used to convert an ECS
+compatible schema definition to type safe field constructors that can be used
+in Go code.
+
+The fld/ecs/0gen.go source file uses genfields for creating the ECS field constructors via
+go generate.
+
+The genfields parses the schema definition from a directory containing the
+schema yaml files: 
+
+```
+genfields -out schema.go -fmt -schema <path to schema>
+```
+

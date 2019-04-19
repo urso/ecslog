@@ -14,11 +14,11 @@ type (
 	}
 
 	nsCloud struct {
+		Account nsCloudAccount
+
 		Instance nsCloudInstance
 
 		Machine nsCloudMachine
-
-		Account nsCloudAccount
 	}
 
 	nsCloudAccount struct {
@@ -59,9 +59,9 @@ type (
 	}
 
 	nsHTTP struct {
-		Response nsHTTPResponse
-
 		Request nsHTTPRequest
+
+		Response nsHTTPResponse
 	}
 
 	nsHTTPRequest struct {
@@ -146,7 +146,7 @@ var (
 	// term "originator" to refer the client in TCP connections. The client
 	// fields describe details about the system acting as the client in the
 	// network event. Client fields are usually populated in conjunction with
-	// server fields.  Client fields are generally not populated for
+	// server fields. Client fields are generally not populated for
 	// packet-level events. Client / server representations can add semantic
 	// context to an exchange, which is helpful to visualize the data in
 	// certain situations. If your context falls in that category, you should
@@ -200,8 +200,9 @@ var (
 	File = nsFile{}
 
 	// Geo provides fields in the ECS geo namespace.
-	// Geo fields can carry data about a specific location related to an event
-	// or geo information derived from an IP field.
+	// Geo fields can carry data about a specific location related to an
+	// event. This geolocation information can be derived from techniques such
+	// as Geo IP, or be user-supplied.
 	Geo = nsGeo{}
 
 	// Group provides fields in the ECS group namespace.
@@ -212,12 +213,13 @@ var (
 	// Host provides fields in the ECS host namespace.
 	// A host is defined as a general computing instance. ECS host.* fields
 	// should be populated with details about the host on which the event
-	// happened, or on which the measurement was taken. Host types include
+	// happened, or from which the measurement was taken. Host types include
 	// hardware, virtual machines, Docker containers, and Kubernetes nodes.
 	Host = nsHost{}
 
 	// HTTP provides fields in the ECS http namespace.
-	// Fields related to HTTP activity.
+	// Fields related to HTTP activity. Use the `url` field set to store the
+	// url of the request.
 	HTTP = nsHTTP{}
 
 	// Log provides fields in the ECS log namespace.
@@ -263,13 +265,13 @@ var (
 
 	// Related provides fields in the ECS related namespace.
 	// This field set is meant to facilitate pivoting around a piece of data.
-	// Some pieces of information can be seen in many places in ECS. To
-	// facilitate searching for them, append values to their corresponding
-	// field in `related.`. A concrete example is IP addresses, which can be
-	// under host, observer, source, destination, client, server, and
-	// network.forwarded_ip. If you append all IPs to `related.ip`, you can
-	// then search for a given IP trivially, no matter where it appeared, by
-	// querying `related.ip:a.b.c.d`.
+	// Some pieces of information can be seen in many places in an ECS event.
+	// To facilitate searching for them, store an array of all seen values to
+	// their corresponding field in `related.`. A concrete example is IP
+	// addresses, which can be under host, observer, source, destination,
+	// client, server, and network.forwarded_ip. If you append all IPs to
+	// `related.ip`, you can then search for a given IP trivially, no matter
+	// where it appeared, by querying `related.ip:a.b.c.d`.
 	Related = nsRelated{}
 
 	// Server provides fields in the ECS server namespace.
@@ -301,7 +303,8 @@ var (
 	Source = nsSource{}
 
 	// URL provides fields in the ECS url namespace.
-	// URL fields provide a complete URL, with scheme, host, and path.
+	// URL fields provide support for complete or partial URLs, and supports
+	// the breaking down into scheme, domain, path, and so on.
 	URL = nsURL{}
 
 	// User provides fields in the ECS user namespace.
@@ -316,7 +319,7 @@ var (
 	UserAgent = nsUserAgent{}
 )
 
-const Version = "1.0.0-beta"
+const Version = "1.0.0"
 
 func ecsField(key string, val fld.Value) fld.Field {
 	return fld.Field{Key: key, Value: val, Standardized: true}
@@ -332,18 +335,21 @@ func ecsFloat64(key string, val float64) fld.Field   { return ecsField(key, fld.
 
 // ## agent fields
 
-// ID create the ECS complain 'agent.id' field.
-// Unique identifier of this agent (if one exists). Example: For Beats
-// this would be beat.id.
-func (nsAgent) ID(value string) fld.Field {
-	return ecsString("agent.id", value)
-}
-
 // EphemeralID create the ECS complain 'agent.ephemeral_id' field.
 // Ephemeral identifier of this agent (if one exists). This id normally
 // changes across restarts, but `agent.id` does not.
 func (nsAgent) EphemeralID(value string) fld.Field {
 	return ecsString("agent.ephemeral_id", value)
+}
+
+// Name create the ECS complain 'agent.name' field.
+// Custom name of the agent. This is a name that can be given to an agent.
+// This can be helpful if for example two Filebeat instances are running
+// on the same host but a human readable separation is needed on which
+// Filebeat instance data is coming from. If no name is given, the name is
+// often left empty.
+func (nsAgent) Name(value string) fld.Field {
+	return ecsString("agent.name", value)
 }
 
 // Type create the ECS complain 'agent.type' field.
@@ -354,44 +360,25 @@ func (nsAgent) Type(value string) fld.Field {
 	return ecsString("agent.type", value)
 }
 
+// ID create the ECS complain 'agent.id' field.
+// Unique identifier of this agent (if one exists). Example: For Beats
+// this would be beat.id.
+func (nsAgent) ID(value string) fld.Field {
+	return ecsString("agent.id", value)
+}
+
 // Version create the ECS complain 'agent.version' field.
 // Version of the agent.
 func (nsAgent) Version(value string) fld.Field {
 	return ecsString("agent.version", value)
 }
 
-// Name create the ECS complain 'agent.name' field.
-// Name of the agent. This is a name that can be given to an agent. This
-// can be helpful if for example two Filebeat instances are running on the
-// same host but a human readable separation is needed on which Filebeat
-// instance data is coming from. If no name is given, the name is often
-// left empty.
-func (nsAgent) Name(value string) fld.Field {
-	return ecsString("agent.name", value)
-}
-
 // ## client fields
-
-// IP create the ECS complain 'client.ip' field.
-// IP address of the client. Can be one or multiple IPv4 or IPv6
-// addresses.
-func (nsClient) IP(value string) fld.Field {
-	return ecsString("client.ip", value)
-}
 
 // Packets create the ECS complain 'client.packets' field.
 // Packets sent from the client to the server.
 func (nsClient) Packets(value int64) fld.Field {
 	return ecsInt64("client.packets", value)
-}
-
-// Address create the ECS complain 'client.address' field.
-// Some event client addresses are defined ambiguously. The event will
-// sometimes list an IP, a domain or a unix socket.  You should always
-// store the raw address in the `.address` field. Then it should be
-// duplicated to `.ip` or `.domain`, depending on which one it is.
-func (nsClient) Address(value string) fld.Field {
-	return ecsString("client.address", value)
 }
 
 // Port create the ECS complain 'client.port' field.
@@ -406,25 +393,35 @@ func (nsClient) MAC(value string) fld.Field {
 	return ecsString("client.mac", value)
 }
 
-// Bytes create the ECS complain 'client.bytes' field.
-// Bytes sent from the client to the server.
-func (nsClient) Bytes(value int64) fld.Field {
-	return ecsInt64("client.bytes", value)
-}
-
 // Domain create the ECS complain 'client.domain' field.
 // Client domain.
 func (nsClient) Domain(value string) fld.Field {
 	return ecsString("client.domain", value)
 }
 
-// ## cloud fields
-
-// AvailabilityZone create the ECS complain 'cloud.availability_zone' field.
-// Availability zone in which this host is running.
-func (nsCloud) AvailabilityZone(value string) fld.Field {
-	return ecsString("cloud.availability_zone", value)
+// Bytes create the ECS complain 'client.bytes' field.
+// Bytes sent from the client to the server.
+func (nsClient) Bytes(value int64) fld.Field {
+	return ecsInt64("client.bytes", value)
 }
+
+// IP create the ECS complain 'client.ip' field.
+// IP address of the client. Can be one or multiple IPv4 or IPv6
+// addresses.
+func (nsClient) IP(value string) fld.Field {
+	return ecsString("client.ip", value)
+}
+
+// Address create the ECS complain 'client.address' field.
+// Some event client addresses are defined ambiguously. The event will
+// sometimes list an IP, a domain or a unix socket.  You should always
+// store the raw address in the `.address` field. Then it should be
+// duplicated to `.ip` or `.domain`, depending on which one it is.
+func (nsClient) Address(value string) fld.Field {
+	return ecsString("client.address", value)
+}
+
+// ## cloud fields
 
 // Region create the ECS complain 'cloud.region' field.
 // Region in which this host is running.
@@ -432,8 +429,14 @@ func (nsCloud) Region(value string) fld.Field {
 	return ecsString("cloud.region", value)
 }
 
+// AvailabilityZone create the ECS complain 'cloud.availability_zone' field.
+// Availability zone in which this host is running.
+func (nsCloud) AvailabilityZone(value string) fld.Field {
+	return ecsString("cloud.availability_zone", value)
+}
+
 // Provider create the ECS complain 'cloud.provider' field.
-// Name of the cloud provider. Example values are ec2, gce, or
+// Name of the cloud provider. Example values are aws, azure, gcp, or
 // digitalocean.
 func (nsCloud) Provider(value string) fld.Field {
 	return ecsString("cloud.provider", value)
@@ -451,16 +454,16 @@ func (nsCloudAccount) ID(value string) fld.Field {
 
 // ## cloud.instance fields
 
-// ID create the ECS complain 'cloud.instance.id' field.
-// Instance ID of the host machine.
-func (nsCloudInstance) ID(value string) fld.Field {
-	return ecsString("cloud.instance.id", value)
-}
-
 // Name create the ECS complain 'cloud.instance.name' field.
 // Instance name of the host machine.
 func (nsCloudInstance) Name(value string) fld.Field {
 	return ecsString("cloud.instance.name", value)
+}
+
+// ID create the ECS complain 'cloud.instance.id' field.
+// Instance ID of the host machine.
+func (nsCloudInstance) ID(value string) fld.Field {
+	return ecsString("cloud.instance.id", value)
 }
 
 // ## cloud.machine fields
@@ -473,10 +476,10 @@ func (nsCloudMachine) Type(value string) fld.Field {
 
 // ## container fields
 
-// Name create the ECS complain 'container.name' field.
-// Container name.
-func (nsContainer) Name(value string) fld.Field {
-	return ecsString("container.name", value)
+// Labels create the ECS complain 'container.labels' field.
+// Image labels.
+func (nsContainer) Labels(value map[string]interface{}) fld.Field {
+	return ecsAny("container.labels", value)
 }
 
 // ID create the ECS complain 'container.id' field.
@@ -485,10 +488,10 @@ func (nsContainer) ID(value string) fld.Field {
 	return ecsString("container.id", value)
 }
 
-// Labels create the ECS complain 'container.labels' field.
-// Image labels.
-func (nsContainer) Labels(value map[string]interface{}) fld.Field {
-	return ecsAny("container.labels", value)
+// Name create the ECS complain 'container.name' field.
+// Container name.
+func (nsContainer) Name(value string) fld.Field {
+	return ecsString("container.name", value)
 }
 
 // Runtime create the ECS complain 'container.runtime' field.
@@ -499,30 +502,24 @@ func (nsContainer) Runtime(value string) fld.Field {
 
 // ## container.image fields
 
-// Name create the ECS complain 'container.image.name' field.
-// Name of the image the container was built on.
-func (nsContainerImage) Name(value string) fld.Field {
-	return ecsString("container.image.name", value)
-}
-
 // Tag create the ECS complain 'container.image.tag' field.
 // Container image tag.
 func (nsContainerImage) Tag(value string) fld.Field {
 	return ecsString("container.image.tag", value)
 }
 
-// ## destination fields
-
-// Port create the ECS complain 'destination.port' field.
-// Port of the destination.
-func (nsDestination) Port(value int64) fld.Field {
-	return ecsInt64("destination.port", value)
+// Name create the ECS complain 'container.image.name' field.
+// Name of the image the container was built on.
+func (nsContainerImage) Name(value string) fld.Field {
+	return ecsString("container.image.name", value)
 }
 
-// MAC create the ECS complain 'destination.mac' field.
-// MAC address of the destination.
-func (nsDestination) MAC(value string) fld.Field {
-	return ecsString("destination.mac", value)
+// ## destination fields
+
+// Packets create the ECS complain 'destination.packets' field.
+// Packets sent from the destination to the source.
+func (nsDestination) Packets(value int64) fld.Field {
+	return ecsInt64("destination.packets", value)
 }
 
 // Domain create the ECS complain 'destination.domain' field.
@@ -531,10 +528,17 @@ func (nsDestination) Domain(value string) fld.Field {
 	return ecsString("destination.domain", value)
 }
 
-// Bytes create the ECS complain 'destination.bytes' field.
-// Bytes sent from the destination to the source.
-func (nsDestination) Bytes(value int64) fld.Field {
-	return ecsInt64("destination.bytes", value)
+// IP create the ECS complain 'destination.ip' field.
+// IP address of the destination. Can be one or multiple IPv4 or IPv6
+// addresses.
+func (nsDestination) IP(value string) fld.Field {
+	return ecsString("destination.ip", value)
+}
+
+// MAC create the ECS complain 'destination.mac' field.
+// MAC address of the destination.
+func (nsDestination) MAC(value string) fld.Field {
+	return ecsString("destination.mac", value)
 }
 
 // Address create the ECS complain 'destination.address' field.
@@ -546,17 +550,16 @@ func (nsDestination) Address(value string) fld.Field {
 	return ecsString("destination.address", value)
 }
 
-// Packets create the ECS complain 'destination.packets' field.
-// Packets sent from the destination to the source.
-func (nsDestination) Packets(value int64) fld.Field {
-	return ecsInt64("destination.packets", value)
+// Port create the ECS complain 'destination.port' field.
+// Port of the destination.
+func (nsDestination) Port(value int64) fld.Field {
+	return ecsInt64("destination.port", value)
 }
 
-// IP create the ECS complain 'destination.ip' field.
-// IP address of the destination. Can be one or multiple IPv4 or IPv6
-// addresses.
-func (nsDestination) IP(value string) fld.Field {
-	return ecsString("destination.ip", value)
+// Bytes create the ECS complain 'destination.bytes' field.
+// Bytes sent from the destination to the source.
+func (nsDestination) Bytes(value int64) fld.Field {
+	return ecsInt64("destination.bytes", value)
 }
 
 // ## error fields
@@ -567,49 +570,19 @@ func (nsError) Message(value string) fld.Field {
 	return ecsString("error.message", value)
 }
 
-// ID create the ECS complain 'error.id' field.
-// Unique identifier for the error.
-func (nsError) ID(value string) fld.Field {
-	return ecsString("error.id", value)
-}
-
 // Code create the ECS complain 'error.code' field.
 // Error code describing the error.
 func (nsError) Code(value string) fld.Field {
 	return ecsString("error.code", value)
 }
 
+// ID create the ECS complain 'error.id' field.
+// Unique identifier for the error.
+func (nsError) ID(value string) fld.Field {
+	return ecsString("error.id", value)
+}
+
 // ## event fields
-
-// ID create the ECS complain 'event.id' field.
-// Unique ID to describe the event.
-func (nsEvent) ID(value string) fld.Field {
-	return ecsString("event.id", value)
-}
-
-// RiskScore create the ECS complain 'event.risk_score' field.
-// Risk score or priority of the event (e.g. security solutions). Use your
-// system's original value here.
-func (nsEvent) RiskScore(value float64) fld.Field {
-	return ecsFloat64("event.risk_score", value)
-}
-
-// Category create the ECS complain 'event.category' field.
-// Event category. This contains high-level information about the contents
-// of the event. It is more generic than `event.action`, in the sense that
-// typically a category contains multiple actions. Warning: In future
-// versions of ECS, we plan to provide a list of acceptable values for
-// this field, please use with caution.
-func (nsEvent) Category(value string) fld.Field {
-	return ecsString("event.category", value)
-}
-
-// End create the ECS complain 'event.end' field.
-// event.end contains the date when the event ended or when the activity
-// was last observed.
-func (nsEvent) End(value time.Time) fld.Field {
-	return ecsTime("event.end", value)
-}
 
 // Duration create the ECS complain 'event.duration' field.
 // Duration of the event in nanoseconds. If event.start and event.end are
@@ -619,55 +592,11 @@ func (nsEvent) Duration(value int64) fld.Field {
 	return ecsInt64("event.duration", value)
 }
 
-// Kind create the ECS complain 'event.kind' field.
-// The kind of the event. This gives information about what type of
-// information the event contains, without being specific to the contents
-// of the event.  Examples are `event`, `state`, `alarm`. Warning: In
-// future versions of ECS, we plan to provide a list of acceptable values
-// for this field, please use with caution.
-func (nsEvent) Kind(value string) fld.Field {
-	return ecsString("event.kind", value)
-}
-
-// Dataset create the ECS complain 'event.dataset' field.
-// Name of the dataset. The concept of a `dataset` (fileset / metricset)
-// is used in Beats as a subset of modules. It contains the information
-// which is currently stored in metricset.name and metricset.module or
-// fileset.name.
-func (nsEvent) Dataset(value string) fld.Field {
-	return ecsString("event.dataset", value)
-}
-
-// Original create the ECS complain 'event.original' field.
-// Raw text message of entire event. Used to demonstrate log integrity.
-// This field is not indexed and doc_values are disabled. It cannot be
-// searched, but it can be retrieved from `_source`.
-func (nsEvent) Original(value string) fld.Field {
-	return ecsString("event.original", value)
-}
-
-// Created create the ECS complain 'event.created' field.
-// event.created contains the date when the event was created. This
-// timestamp is distinct from @timestamp in that @timestamp contains the
-// processed timestamp. For logs these two timestamps can be different as
-// the timestamp in the log line and when the event is read for example by
-// Filebeat are not identical. `@timestamp` must contain the timestamp
-// extracted from the log line, event.created when the log line is read.
-// The same could apply to package capturing where @timestamp contains the
-// timestamp extracted from the network package and event.created when the
-// event was created. In case the two timestamps are identical, @timestamp
-// should be used.
-func (nsEvent) Created(value time.Time) fld.Field {
-	return ecsTime("event.created", value)
-}
-
-// Action create the ECS complain 'event.action' field.
-// The action captured by the event. This describes the information in the
-// event. It is more specific than `event.category`. Examples are
-// `group-add`, `process-started`, `file-created`. The value is normally
-// defined by the implementer.
-func (nsEvent) Action(value string) fld.Field {
-	return ecsString("event.action", value)
+// Module create the ECS complain 'event.module' field.
+// Name of the module this data is coming from. This information is coming
+// from the modules used in Beats or Logstash.
+func (nsEvent) Module(value string) fld.Field {
+	return ecsString("event.module", value)
 }
 
 // Timezone create the ECS complain 'event.timezone' field.
@@ -680,18 +609,62 @@ func (nsEvent) Timezone(value string) fld.Field {
 	return ecsString("event.timezone", value)
 }
 
-// Start create the ECS complain 'event.start' field.
-// event.start contains the date when the event started or when the
-// activity was first observed.
-func (nsEvent) Start(value time.Time) fld.Field {
-	return ecsTime("event.start", value)
+// Outcome create the ECS complain 'event.outcome' field.
+// The outcome of the event. If the event describes an action, this fields
+// contains the outcome of that action. Examples outcomes are `success`
+// and `failure`. Warning: In future versions of ECS, we plan to provide a
+// list of acceptable values for this field, please use with caution.
+func (nsEvent) Outcome(value string) fld.Field {
+	return ecsString("event.outcome", value)
 }
 
-// Module create the ECS complain 'event.module' field.
-// Name of the module this data is coming from. This information is coming
-// from the modules used in Beats or Logstash.
-func (nsEvent) Module(value string) fld.Field {
-	return ecsString("event.module", value)
+// ID create the ECS complain 'event.id' field.
+// Unique ID to describe the event.
+func (nsEvent) ID(value string) fld.Field {
+	return ecsString("event.id", value)
+}
+
+// Hash create the ECS complain 'event.hash' field.
+// Hash (perhaps logstash fingerprint) of raw field to be able to
+// demonstrate log integrity.
+func (nsEvent) Hash(value string) fld.Field {
+	return ecsString("event.hash", value)
+}
+
+// Action create the ECS complain 'event.action' field.
+// The action captured by the event. This describes the information in the
+// event. It is more specific than `event.category`. Examples are
+// `group-add`, `process-started`, `file-created`. The value is normally
+// defined by the implementer.
+func (nsEvent) Action(value string) fld.Field {
+	return ecsString("event.action", value)
+}
+
+// Original create the ECS complain 'event.original' field.
+// Raw text message of entire event. Used to demonstrate log integrity.
+// This field is not indexed and doc_values are disabled. It cannot be
+// searched, but it can be retrieved from `_source`.
+func (nsEvent) Original(value string) fld.Field {
+	return ecsString("event.original", value)
+}
+
+// Category create the ECS complain 'event.category' field.
+// Event category. This contains high-level information about the contents
+// of the event. It is more generic than `event.action`, in the sense that
+// typically a category contains multiple actions. Warning: In future
+// versions of ECS, we plan to provide a list of acceptable values for
+// this field, please use with caution.
+func (nsEvent) Category(value string) fld.Field {
+	return ecsString("event.category", value)
+}
+
+// Severity create the ECS complain 'event.severity' field.
+// Severity describes the original severity of the event. What the
+// different severity values mean can very different between use cases.
+// It's up to the implementer to make sure severities are consistent
+// across events.
+func (nsEvent) Severity(value int64) fld.Field {
+	return ecsInt64("event.severity", value)
 }
 
 // RiskScoreNorm create the ECS complain 'event.risk_score_norm' field.
@@ -702,19 +675,21 @@ func (nsEvent) RiskScoreNorm(value float64) fld.Field {
 	return ecsFloat64("event.risk_score_norm", value)
 }
 
-// Severity create the ECS complain 'event.severity' field.
-// Severity describes the severity of the event. What the different
-// severity values mean can very different between use cases. It's up to
-// the implementer to make sure severities are consistent across events.
-func (nsEvent) Severity(value int64) fld.Field {
-	return ecsInt64("event.severity", value)
+// Kind create the ECS complain 'event.kind' field.
+// The kind of the event. This gives information about what type of
+// information the event contains, without being specific to the contents
+// of the event.  Examples are `event`, `state`, `alarm`. Warning: In
+// future versions of ECS, we plan to provide a list of acceptable values
+// for this field, please use with caution.
+func (nsEvent) Kind(value string) fld.Field {
+	return ecsString("event.kind", value)
 }
 
-// Hash create the ECS complain 'event.hash' field.
-// Hash (perhaps logstash fingerprint) of raw field to be able to
-// demonstrate log integrity.
-func (nsEvent) Hash(value string) fld.Field {
-	return ecsString("event.hash", value)
+// End create the ECS complain 'event.end' field.
+// event.end contains the date when the event ended or when the activity
+// was last observed.
+func (nsEvent) End(value time.Time) fld.Field {
+	return ecsTime("event.end", value)
 }
 
 // Type create the ECS complain 'event.type' field.
@@ -723,21 +698,61 @@ func (nsEvent) Type(value string) fld.Field {
 	return ecsString("event.type", value)
 }
 
-// Outcome create the ECS complain 'event.outcome' field.
-// The outcome of the event. If the event describes an action, this fields
-// contains the outcome of that action. Examples outcomes are `success`
-// and `failure`. Warning: In future versions of ECS, we plan to provide a
-// list of acceptable values for this field, please use with caution.
-func (nsEvent) Outcome(value string) fld.Field {
-	return ecsString("event.outcome", value)
+// Created create the ECS complain 'event.created' field.
+// event.created contains the date/time when the event was first read by
+// an agent, or by your pipeline. This field is distinct from @timestamp
+// in that @timestamp typically contain the time extracted from the
+// original event. In most situations, these two timestamps will be
+// slightly different. The difference can be used to calculate the delay
+// between your source generating an event, and the time when your agent
+// first processed it. This can be used to monitor your agent's or
+// pipeline's ability to keep up with your event source. In case the two
+// timestamps are identical, @timestamp should be used.
+func (nsEvent) Created(value time.Time) fld.Field {
+	return ecsTime("event.created", value)
+}
+
+// RiskScore create the ECS complain 'event.risk_score' field.
+// Risk score or priority of the event (e.g. security solutions). Use your
+// system's original value here.
+func (nsEvent) RiskScore(value float64) fld.Field {
+	return ecsFloat64("event.risk_score", value)
+}
+
+// Dataset create the ECS complain 'event.dataset' field.
+// Name of the dataset. The concept of a `dataset` (fileset / metricset)
+// is used in Beats as a subset of modules. It contains the information
+// which is currently stored in metricset.name and metricset.module or
+// fileset.name.
+func (nsEvent) Dataset(value string) fld.Field {
+	return ecsString("event.dataset", value)
+}
+
+// Start create the ECS complain 'event.start' field.
+// event.start contains the date when the event started or when the
+// activity was first observed.
+func (nsEvent) Start(value time.Time) fld.Field {
+	return ecsTime("event.start", value)
 }
 
 // ## file fields
+
+// Mode create the ECS complain 'file.mode' field.
+// Mode of the file in octal representation.
+func (nsFile) Mode(value string) fld.Field {
+	return ecsString("file.mode", value)
+}
 
 // Mtime create the ECS complain 'file.mtime' field.
 // Last time file content was modified.
 func (nsFile) Mtime(value time.Time) fld.Field {
 	return ecsTime("file.mtime", value)
+}
+
+// Inode create the ECS complain 'file.inode' field.
+// Inode representing the file in the filesystem.
+func (nsFile) Inode(value string) fld.Field {
+	return ecsString("file.inode", value)
 }
 
 // Device create the ECS complain 'file.device' field.
@@ -752,28 +767,10 @@ func (nsFile) Path(value string) fld.Field {
 	return ecsString("file.path", value)
 }
 
-// TargetPath create the ECS complain 'file.target_path' field.
-// Target path for symlinks.
-func (nsFile) TargetPath(value string) fld.Field {
-	return ecsString("file.target_path", value)
-}
-
-// Inode create the ECS complain 'file.inode' field.
-// Inode representing the file in the filesystem.
-func (nsFile) Inode(value string) fld.Field {
-	return ecsString("file.inode", value)
-}
-
-// Mode create the ECS complain 'file.mode' field.
-// Mode of the file in octal representation.
-func (nsFile) Mode(value string) fld.Field {
-	return ecsString("file.mode", value)
-}
-
-// Group create the ECS complain 'file.group' field.
-// Primary group name of the file.
-func (nsFile) Group(value string) fld.Field {
-	return ecsString("file.group", value)
+// Type create the ECS complain 'file.type' field.
+// File type (file, dir, or symlink).
+func (nsFile) Type(value string) fld.Field {
+	return ecsString("file.type", value)
 }
 
 // Gid create the ECS complain 'file.gid' field.
@@ -782,10 +779,10 @@ func (nsFile) Gid(value string) fld.Field {
 	return ecsString("file.gid", value)
 }
 
-// Ctime create the ECS complain 'file.ctime' field.
-// Last time file metadata changed.
-func (nsFile) Ctime(value time.Time) fld.Field {
-	return ecsTime("file.ctime", value)
+// TargetPath create the ECS complain 'file.target_path' field.
+// Target path for symlinks.
+func (nsFile) TargetPath(value string) fld.Field {
+	return ecsString("file.target_path", value)
 }
 
 // Size create the ECS complain 'file.size' field.
@@ -794,10 +791,22 @@ func (nsFile) Size(value int64) fld.Field {
 	return ecsInt64("file.size", value)
 }
 
-// Type create the ECS complain 'file.type' field.
-// File type (file, dir, or symlink).
-func (nsFile) Type(value string) fld.Field {
-	return ecsString("file.type", value)
+// Extension create the ECS complain 'file.extension' field.
+// File extension. This should allow easy filtering by file extensions.
+func (nsFile) Extension(value string) fld.Field {
+	return ecsString("file.extension", value)
+}
+
+// Group create the ECS complain 'file.group' field.
+// Primary group name of the file.
+func (nsFile) Group(value string) fld.Field {
+	return ecsString("file.group", value)
+}
+
+// Ctime create the ECS complain 'file.ctime' field.
+// Last time file metadata changed.
+func (nsFile) Ctime(value time.Time) fld.Field {
+	return ecsTime("file.ctime", value)
 }
 
 // Owner create the ECS complain 'file.owner' field.
@@ -812,48 +821,18 @@ func (nsFile) UID(value string) fld.Field {
 	return ecsString("file.uid", value)
 }
 
-// Extension create the ECS complain 'file.extension' field.
-// File extension. This should allow easy filtering by file extensions.
-func (nsFile) Extension(value string) fld.Field {
-	return ecsString("file.extension", value)
-}
-
 // ## geo fields
 
-// CountryIsoCode create the ECS complain 'geo.country_iso_code' field.
-// Country ISO code.
-func (nsGeo) CountryIsoCode(value string) fld.Field {
-	return ecsString("geo.country_iso_code", value)
-}
-
-// RegionName create the ECS complain 'geo.region_name' field.
-// Region name.
-func (nsGeo) RegionName(value string) fld.Field {
-	return ecsString("geo.region_name", value)
+// Location create the ECS complain 'geo.location' field.
+// Longitude and latitude.
+func (nsGeo) Location(value string) fld.Field {
+	return ecsString("geo.location", value)
 }
 
 // ContinentName create the ECS complain 'geo.continent_name' field.
 // Name of the continent.
 func (nsGeo) ContinentName(value string) fld.Field {
 	return ecsString("geo.continent_name", value)
-}
-
-// RegionIsoCode create the ECS complain 'geo.region_iso_code' field.
-// Region ISO code.
-func (nsGeo) RegionIsoCode(value string) fld.Field {
-	return ecsString("geo.region_iso_code", value)
-}
-
-// CityName create the ECS complain 'geo.city_name' field.
-// City name.
-func (nsGeo) CityName(value string) fld.Field {
-	return ecsString("geo.city_name", value)
-}
-
-// Location create the ECS complain 'geo.location' field.
-// Longitude and latitude.
-func (nsGeo) Location(value string) fld.Field {
-	return ecsString("geo.location", value)
 }
 
 // CountryName create the ECS complain 'geo.country_name' field.
@@ -869,6 +848,30 @@ func (nsGeo) CountryName(value string) fld.Field {
 // typically used in automated geolocation.
 func (nsGeo) Name(value string) fld.Field {
 	return ecsString("geo.name", value)
+}
+
+// CountryIsoCode create the ECS complain 'geo.country_iso_code' field.
+// Country ISO code.
+func (nsGeo) CountryIsoCode(value string) fld.Field {
+	return ecsString("geo.country_iso_code", value)
+}
+
+// RegionIsoCode create the ECS complain 'geo.region_iso_code' field.
+// Region ISO code.
+func (nsGeo) RegionIsoCode(value string) fld.Field {
+	return ecsString("geo.region_iso_code", value)
+}
+
+// CityName create the ECS complain 'geo.city_name' field.
+// City name.
+func (nsGeo) CityName(value string) fld.Field {
+	return ecsString("geo.city_name", value)
+}
+
+// RegionName create the ECS complain 'geo.region_name' field.
+// Region name.
+func (nsGeo) RegionName(value string) fld.Field {
+	return ecsString("geo.region_name", value)
 }
 
 // ## group fields
@@ -887,10 +890,30 @@ func (nsGroup) ID(value string) fld.Field {
 
 // ## host fields
 
+// ID create the ECS complain 'host.id' field.
+// Unique host id. As hostname is not always unique, use values that are
+// meaningful in your environment. Example: The current usage of
+// `beat.name`.
+func (nsHost) ID(value string) fld.Field {
+	return ecsString("host.id", value)
+}
+
 // IP create the ECS complain 'host.ip' field.
 // Host ip address.
 func (nsHost) IP(value string) fld.Field {
 	return ecsString("host.ip", value)
+}
+
+// MAC create the ECS complain 'host.mac' field.
+// Host mac address.
+func (nsHost) MAC(value string) fld.Field {
+	return ecsString("host.mac", value)
+}
+
+// Architecture create the ECS complain 'host.architecture' field.
+// Operating system architecture.
+func (nsHost) Architecture(value string) fld.Field {
+	return ecsString("host.architecture", value)
 }
 
 // Name create the ECS complain 'host.name' field.
@@ -901,18 +924,12 @@ func (nsHost) Name(value string) fld.Field {
 	return ecsString("host.name", value)
 }
 
-// ID create the ECS complain 'host.id' field.
-// Unique host id. As hostname is not always unique, use values that are
-// meaningful in your environment. Example: The current usage of
-// `beat.name`.
-func (nsHost) ID(value string) fld.Field {
-	return ecsString("host.id", value)
-}
-
-// Architecture create the ECS complain 'host.architecture' field.
-// Operating system architecture.
-func (nsHost) Architecture(value string) fld.Field {
-	return ecsString("host.architecture", value)
+// Type create the ECS complain 'host.type' field.
+// Type of host. For Cloud providers this can be the machine type like
+// `t2.medium`. If vm, this could be the container, for example, or other
+// information meaningful in your environment.
+func (nsHost) Type(value string) fld.Field {
+	return ecsString("host.type", value)
 }
 
 // Hostname create the ECS complain 'host.hostname' field.
@@ -922,24 +939,10 @@ func (nsHost) Hostname(value string) fld.Field {
 	return ecsString("host.hostname", value)
 }
 
-// Type create the ECS complain 'host.type' field.
-// Type of host. For Cloud providers this can be the machine type like
-// `t2.medium`. If vm, this could be the container, for example, or other
-// information meaningful in your environment.
-func (nsHost) Type(value string) fld.Field {
-	return ecsString("host.type", value)
-}
-
-// MAC create the ECS complain 'host.mac' field.
-// Host mac address.
-func (nsHost) MAC(value string) fld.Field {
-	return ecsString("host.mac", value)
-}
-
 // ## http fields
 
 // Version create the ECS complain 'http.version' field.
-// Http version.
+// HTTP version.
 func (nsHTTP) Version(value string) fld.Field {
 	return ecsString("http.version", value)
 }
@@ -952,18 +955,17 @@ func (nsHTTPRequest) Referrer(value string) fld.Field {
 	return ecsString("http.request.referrer", value)
 }
 
-// Method create the ECS complain 'http.request.method' field.
-// Http request method. The field value must be normalized to lowercase
-// for querying. See "Lowercase Capitalization" in the "Implementing ECS"
-// section.
-func (nsHTTPRequest) Method(value string) fld.Field {
-	return ecsString("http.request.method", value)
-}
-
 // Bytes create the ECS complain 'http.request.bytes' field.
 // Total size in bytes of the request (body and headers).
 func (nsHTTPRequest) Bytes(value int64) fld.Field {
 	return ecsInt64("http.request.bytes", value)
+}
+
+// Method create the ECS complain 'http.request.method' field.
+// HTTP request method. The field value must be normalized to lowercase
+// for querying. See the documentation section "Implementing ECS".
+func (nsHTTPRequest) Method(value string) fld.Field {
+	return ecsString("http.request.method", value)
 }
 
 // ## http.request.body fields
@@ -975,12 +977,18 @@ func (nsHTTPRequestBody) Bytes(value int64) fld.Field {
 }
 
 // Content create the ECS complain 'http.request.body.content' field.
-// The full http request body.
+// The full HTTP request body.
 func (nsHTTPRequestBody) Content(value string) fld.Field {
 	return ecsString("http.request.body.content", value)
 }
 
 // ## http.response fields
+
+// StatusCode create the ECS complain 'http.response.status_code' field.
+// HTTP response status code.
+func (nsHTTPResponse) StatusCode(value int64) fld.Field {
+	return ecsInt64("http.response.status_code", value)
+}
 
 // Bytes create the ECS complain 'http.response.bytes' field.
 // Total size in bytes of the response (body and headers).
@@ -988,16 +996,10 @@ func (nsHTTPResponse) Bytes(value int64) fld.Field {
 	return ecsInt64("http.response.bytes", value)
 }
 
-// StatusCode create the ECS complain 'http.response.status_code' field.
-// Http response status code.
-func (nsHTTPResponse) StatusCode(value int64) fld.Field {
-	return ecsInt64("http.response.status_code", value)
-}
-
 // ## http.response.body fields
 
 // Content create the ECS complain 'http.response.body.content' field.
-// The full http response body.
+// The full HTTP response body.
 func (nsHTTPResponseBody) Content(value string) fld.Field {
 	return ecsString("http.response.body.content", value)
 }
@@ -1009,6 +1011,13 @@ func (nsHTTPResponseBody) Bytes(value int64) fld.Field {
 }
 
 // ## log fields
+
+// Level create the ECS complain 'log.level' field.
+// Original log level of the log event. Some examples are `warn`, `error`,
+// `i`.
+func (nsLog) Level(value string) fld.Field {
+	return ecsString("log.level", value)
+}
 
 // Original create the ECS complain 'log.original' field.
 // This is the original log message and contains the full log message
@@ -1022,39 +1031,51 @@ func (nsLog) Original(value string) fld.Field {
 	return ecsString("log.original", value)
 }
 
-// Level create the ECS complain 'log.level' field.
-// Log level of the log event. Some examples are `WARN`, `ERR`, `INFO`.
-func (nsLog) Level(value string) fld.Field {
-	return ecsString("log.level", value)
-}
-
 // ## network fields
 
-// Transport create the ECS complain 'network.transport' field.
-// Same as network.iana_number, but instead using the Keyword name of the
-// transport layer (udp, tcp, ipv6-icmp, etc.) The field value must be
-// normalized to lowercase for querying. See "Lowercase Capitalization" in
-// the "Implementing ECS"  section.
-func (nsNetwork) Transport(value string) fld.Field {
-	return ecsString("network.transport", value)
+// Bytes create the ECS complain 'network.bytes' field.
+// Total bytes transferred in both directions. If `source.bytes` and
+// `destination.bytes` are known, `network.bytes` is their sum.
+func (nsNetwork) Bytes(value int64) fld.Field {
+	return ecsInt64("network.bytes", value)
+}
+
+// CommunityID create the ECS complain 'network.community_id' field.
+// A hash of source and destination IPs and ports, as well as the protocol
+// used in a communication. This is a tool-agnostic standard to identify
+// flows. Learn more at https://github.com/corelight/community-id-spec.
+func (nsNetwork) CommunityID(value string) fld.Field {
+	return ecsString("network.community_id", value)
 }
 
 // Type create the ECS complain 'network.type' field.
 // In the OSI Model this would be the Network Layer. ipv4, ipv6, ipsec,
 // pim, etc The field value must be normalized to lowercase for querying.
-// See "Lowercase Capitalization" in the "Implementing ECS" section.
+// See the documentation section "Implementing ECS".
 func (nsNetwork) Type(value string) fld.Field {
 	return ecsString("network.type", value)
 }
 
+// ForwardedIP create the ECS complain 'network.forwarded_ip' field.
+// Host IP address when the source IP address is the proxy.
+func (nsNetwork) ForwardedIP(value string) fld.Field {
+	return ecsString("network.forwarded_ip", value)
+}
+
+// Name create the ECS complain 'network.name' field.
+// Name given by operators to sections of their network.
+func (nsNetwork) Name(value string) fld.Field {
+	return ecsString("network.name", value)
+}
+
 // Application create the ECS complain 'network.application' field.
-// A name given to an application. This can be arbitrarily assigned for
-// things like microservices, but also apply to things like skype, icq,
-// facebook, twitter. This would be used in situations where the vendor or
-// service can be decoded such as from the source/dest IP owners, ports,
-// or wire format. The field value must be normalized to lowercase for
-// querying. See "Lowercase Capitalization" in the "Implementing ECS"
-// section.
+// A name given to an application level protocol. This can be arbitrarily
+// assigned for things like microservices, but also apply to things like
+// skype, icq, facebook, twitter. This would be used in situations where
+// the vendor or service can be decoded such as from the source/dest IP
+// owners, ports, or wire format. The field value must be normalized to
+// lowercase for querying. See the documentation section "Implementing
+// ECS".
 func (nsNetwork) Application(value string) fld.Field {
 	return ecsString("network.application", value)
 }
@@ -1066,6 +1087,14 @@ func (nsNetwork) Packets(value int64) fld.Field {
 	return ecsInt64("network.packets", value)
 }
 
+// Protocol create the ECS complain 'network.protocol' field.
+// L7 Network protocol name. ex. http, lumberjack, transport protocol. The
+// field value must be normalized to lowercase for querying. See the
+// documentation section "Implementing ECS".
+func (nsNetwork) Protocol(value string) fld.Field {
+	return ecsString("network.protocol", value)
+}
+
 // IANANumber create the ECS complain 'network.iana_number' field.
 // IANA Protocol Number
 // (https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
@@ -1073,6 +1102,15 @@ func (nsNetwork) Packets(value int64) fld.Field {
 // related logs which use the IANA Protocol Number.
 func (nsNetwork) IANANumber(value string) fld.Field {
 	return ecsString("network.iana_number", value)
+}
+
+// Transport create the ECS complain 'network.transport' field.
+// Same as network.iana_number, but instead using the Keyword name of the
+// transport layer (udp, tcp, ipv6-icmp, etc.) The field value must be
+// normalized to lowercase for querying. See the documentation section
+// "Implementing ECS".
+func (nsNetwork) Transport(value string) fld.Field {
+	return ecsString("network.transport", value)
 }
 
 // Direction create the ECS complain 'network.direction' field.
@@ -1086,47 +1124,30 @@ func (nsNetwork) Direction(value string) fld.Field {
 	return ecsString("network.direction", value)
 }
 
-// Name create the ECS complain 'network.name' field.
-// Name given by operators to sections of their network.
-func (nsNetwork) Name(value string) fld.Field {
-	return ecsString("network.name", value)
-}
-
-// Bytes create the ECS complain 'network.bytes' field.
-// Total bytes transferred in both directions. If `source.bytes` and
-// `destination.bytes` are known, `network.bytes` is their sum.
-func (nsNetwork) Bytes(value int64) fld.Field {
-	return ecsInt64("network.bytes", value)
-}
-
-// ForwardedIP create the ECS complain 'network.forwarded_ip' field.
-// Host IP address when the source IP address is the proxy.
-func (nsNetwork) ForwardedIP(value string) fld.Field {
-	return ecsString("network.forwarded_ip", value)
-}
-
-// Protocol create the ECS complain 'network.protocol' field.
-// L7 Network protocol name. ex. http, lumberjack, transport protocol. The
-// field value must be normalized to lowercase for querying. See
-// "Lowercase Capitalization" in the "Implementing ECS" section.
-func (nsNetwork) Protocol(value string) fld.Field {
-	return ecsString("network.protocol", value)
-}
-
-// CommunityID create the ECS complain 'network.community_id' field.
-// A hash of source and destination IPs and ports, as well as the protocol
-// used in a communication. This is a tool-agnostic standard to identify
-// flows. Learn more at https://github.com/corelight/community-id-spec.
-func (nsNetwork) CommunityID(value string) fld.Field {
-	return ecsString("network.community_id", value)
-}
-
 // ## observer fields
 
 // IP create the ECS complain 'observer.ip' field.
 // IP address of the observer.
 func (nsObserver) IP(value string) fld.Field {
 	return ecsString("observer.ip", value)
+}
+
+// Hostname create the ECS complain 'observer.hostname' field.
+// Hostname of the observer.
+func (nsObserver) Hostname(value string) fld.Field {
+	return ecsString("observer.hostname", value)
+}
+
+// MAC create the ECS complain 'observer.mac' field.
+// MAC address of the observer
+func (nsObserver) MAC(value string) fld.Field {
+	return ecsString("observer.mac", value)
+}
+
+// SerialNumber create the ECS complain 'observer.serial_number' field.
+// Observer serial number.
+func (nsObserver) SerialNumber(value string) fld.Field {
+	return ecsString("observer.serial_number", value)
 }
 
 // Type create the ECS complain 'observer.type' field.
@@ -1137,34 +1158,16 @@ func (nsObserver) Type(value string) fld.Field {
 	return ecsString("observer.type", value)
 }
 
-// MAC create the ECS complain 'observer.mac' field.
-// MAC address of the observer
-func (nsObserver) MAC(value string) fld.Field {
-	return ecsString("observer.mac", value)
+// Vendor create the ECS complain 'observer.vendor' field.
+// observer vendor information.
+func (nsObserver) Vendor(value string) fld.Field {
+	return ecsString("observer.vendor", value)
 }
 
 // Version create the ECS complain 'observer.version' field.
 // Observer version.
 func (nsObserver) Version(value string) fld.Field {
 	return ecsString("observer.version", value)
-}
-
-// Hostname create the ECS complain 'observer.hostname' field.
-// Hostname of the observer.
-func (nsObserver) Hostname(value string) fld.Field {
-	return ecsString("observer.hostname", value)
-}
-
-// SerialNumber create the ECS complain 'observer.serial_number' field.
-// Observer serial number.
-func (nsObserver) SerialNumber(value string) fld.Field {
-	return ecsString("observer.serial_number", value)
-}
-
-// Vendor create the ECS complain 'observer.vendor' field.
-// observer vendor information.
-func (nsObserver) Vendor(value string) fld.Field {
-	return ecsString("observer.vendor", value)
 }
 
 // ## organization fields
@@ -1183,30 +1186,6 @@ func (nsOrganization) ID(value string) fld.Field {
 
 // ## os fields
 
-// Family create the ECS complain 'os.family' field.
-// OS family (such as redhat, debian, freebsd, windows).
-func (nsOS) Family(value string) fld.Field {
-	return ecsString("os.family", value)
-}
-
-// Kernel create the ECS complain 'os.kernel' field.
-// Operating system kernel version as a raw string.
-func (nsOS) Kernel(value string) fld.Field {
-	return ecsString("os.kernel", value)
-}
-
-// Full create the ECS complain 'os.full' field.
-// Operating system name, including the version or code name.
-func (nsOS) Full(value string) fld.Field {
-	return ecsString("os.full", value)
-}
-
-// Version create the ECS complain 'os.version' field.
-// Operating system version as a raw string.
-func (nsOS) Version(value string) fld.Field {
-	return ecsString("os.version", value)
-}
-
 // Platform create the ECS complain 'os.platform' field.
 // Operating system platform (such centos, ubuntu, windows).
 func (nsOS) Platform(value string) fld.Field {
@@ -1219,10 +1198,47 @@ func (nsOS) Name(value string) fld.Field {
 	return ecsString("os.name", value)
 }
 
+// Full create the ECS complain 'os.full' field.
+// Operating system name, including the version or code name.
+func (nsOS) Full(value string) fld.Field {
+	return ecsString("os.full", value)
+}
+
+// Kernel create the ECS complain 'os.kernel' field.
+// Operating system kernel version as a raw string.
+func (nsOS) Kernel(value string) fld.Field {
+	return ecsString("os.kernel", value)
+}
+
+// Family create the ECS complain 'os.family' field.
+// OS family (such as redhat, debian, freebsd, windows).
+func (nsOS) Family(value string) fld.Field {
+	return ecsString("os.family", value)
+}
+
+// Version create the ECS complain 'os.version' field.
+// Operating system version as a raw string.
+func (nsOS) Version(value string) fld.Field {
+	return ecsString("os.version", value)
+}
+
 // ## process fields
 
+// Start create the ECS complain 'process.start' field.
+// The time the process started.
+func (nsProcess) Start(value time.Time) fld.Field {
+	return ecsTime("process.start", value)
+}
+
+// PPID create the ECS complain 'process.ppid' field.
+// Process parent id.
+func (nsProcess) PPID(value int64) fld.Field {
+	return ecsInt64("process.ppid", value)
+}
+
 // Args create the ECS complain 'process.args' field.
-// Process arguments. May be filtered to protect sensitive information.
+// Array of process arguments. May be filtered to protect sensitive
+// information.
 func (nsProcess) Args(value string) fld.Field {
 	return ecsString("process.args", value)
 }
@@ -1233,18 +1249,10 @@ func (nsProcess) PID(value int64) fld.Field {
 	return ecsInt64("process.pid", value)
 }
 
-// Title create the ECS complain 'process.title' field.
-// Process title. The proctitle, some times the same as process name. Can
-// also be different: for example a browser setting its title to the web
-// page currently opened.
-func (nsProcess) Title(value string) fld.Field {
-	return ecsString("process.title", value)
-}
-
-// PPID create the ECS complain 'process.ppid' field.
-// Process parent id.
-func (nsProcess) PPID(value int64) fld.Field {
-	return ecsInt64("process.ppid", value)
+// Name create the ECS complain 'process.name' field.
+// Process name. Sometimes called program name or similar.
+func (nsProcess) Name(value string) fld.Field {
+	return ecsString("process.name", value)
 }
 
 // WorkingDirectory create the ECS complain 'process.working_directory' field.
@@ -1253,22 +1261,18 @@ func (nsProcess) WorkingDirectory(value string) fld.Field {
 	return ecsString("process.working_directory", value)
 }
 
+// Title create the ECS complain 'process.title' field.
+// Process title. The proctitle, some times the same as process name. Can
+// also be different: for example a browser setting its title to the web
+// page currently opened.
+func (nsProcess) Title(value string) fld.Field {
+	return ecsString("process.title", value)
+}
+
 // Executable create the ECS complain 'process.executable' field.
 // Absolute path to the process executable.
 func (nsProcess) Executable(value string) fld.Field {
 	return ecsString("process.executable", value)
-}
-
-// Name create the ECS complain 'process.name' field.
-// Process name. Sometimes called program name or similar.
-func (nsProcess) Name(value string) fld.Field {
-	return ecsString("process.name", value)
-}
-
-// Start create the ECS complain 'process.start' field.
-// The time the process started.
-func (nsProcess) Start(value time.Time) fld.Field {
-	return ecsTime("process.start", value)
 }
 
 // ## process.thread fields
@@ -1296,24 +1300,6 @@ func (nsServer) IP(value string) fld.Field {
 	return ecsString("server.ip", value)
 }
 
-// Packets create the ECS complain 'server.packets' field.
-// Packets sent from the server to the client.
-func (nsServer) Packets(value int64) fld.Field {
-	return ecsInt64("server.packets", value)
-}
-
-// Domain create the ECS complain 'server.domain' field.
-// Server domain.
-func (nsServer) Domain(value string) fld.Field {
-	return ecsString("server.domain", value)
-}
-
-// Port create the ECS complain 'server.port' field.
-// Port of the server.
-func (nsServer) Port(value int64) fld.Field {
-	return ecsInt64("server.port", value)
-}
-
 // Address create the ECS complain 'server.address' field.
 // Some event server addresses are defined ambiguously. The event will
 // sometimes list an IP, a domain or a unix socket.  You should always
@@ -1321,6 +1307,12 @@ func (nsServer) Port(value int64) fld.Field {
 // duplicated to `.ip` or `.domain`, depending on which one it is.
 func (nsServer) Address(value string) fld.Field {
 	return ecsString("server.address", value)
+}
+
+// Port create the ECS complain 'server.port' field.
+// Port of the server.
+func (nsServer) Port(value int64) fld.Field {
+	return ecsInt64("server.port", value)
 }
 
 // MAC create the ECS complain 'server.mac' field.
@@ -1335,7 +1327,48 @@ func (nsServer) Bytes(value int64) fld.Field {
 	return ecsInt64("server.bytes", value)
 }
 
+// Packets create the ECS complain 'server.packets' field.
+// Packets sent from the server to the client.
+func (nsServer) Packets(value int64) fld.Field {
+	return ecsInt64("server.packets", value)
+}
+
+// Domain create the ECS complain 'server.domain' field.
+// Server domain.
+func (nsServer) Domain(value string) fld.Field {
+	return ecsString("server.domain", value)
+}
+
 // ## service fields
+
+// Name create the ECS complain 'service.name' field.
+// Name of the service data is collected from. The name of the service is
+// normally user given. This allows if two instances of the same service
+// are running on the same machine they can be differentiated by the
+// `service.name`. Also it allows for distributed services that run on
+// multiple hosts to correlate the related instances based on the name. In
+// the case of Elasticsearch the service.name could contain the cluster
+// name. For Beats the service.name is by default a copy of the
+// `service.type` field if no name is specified.
+func (nsService) Name(value string) fld.Field {
+	return ecsString("service.name", value)
+}
+
+// Type create the ECS complain 'service.type' field.
+// The type of the service data is collected from. The type can be used to
+// group and correlate logs and metrics from one service type. Example: If
+// logs or metrics are collected from Elasticsearch, `service.type` would
+// be `elasticsearch`.
+func (nsService) Type(value string) fld.Field {
+	return ecsString("service.type", value)
+}
+
+// Version create the ECS complain 'service.version' field.
+// Version of the service the data was collected from. This allows to look
+// at a data set only for a specific version of a service.
+func (nsService) Version(value string) fld.Field {
+	return ecsString("service.version", value)
+}
 
 // ID create the ECS complain 'service.id' field.
 // Unique identifier of the running service. This id should uniquely
@@ -1354,47 +1387,18 @@ func (nsService) EphemeralID(value string) fld.Field {
 	return ecsString("service.ephemeral_id", value)
 }
 
-// Type create the ECS complain 'service.type' field.
-// The type of the service data is collected from. The type can be used to
-// group and correlate logs and metrics from one service type. Example: If
-// logs or metrics are collected from Elasticsearch, `service.type` would
-// be `elasticsearch`.
-func (nsService) Type(value string) fld.Field {
-	return ecsString("service.type", value)
-}
-
-// Name create the ECS complain 'service.name' field.
-// Name of the service data is collected from. The name of the service is
-// normally user given. This allows if two instances of the same service
-// are running on the same machine they can be differentiated by the
-// `service.name`. Also it allows for distributed services that run on
-// multiple hosts to correlate the related instances based on the name. In
-// the case of Elasticsearch the service.name could contain the cluster
-// name. For Beats the service.name is by default a copy of the
-// `service.type` field if no name is specified.
-func (nsService) Name(value string) fld.Field {
-	return ecsString("service.name", value)
-}
-
 // State create the ECS complain 'service.state' field.
 // Current state of the service.
 func (nsService) State(value string) fld.Field {
 	return ecsString("service.state", value)
 }
 
-// Version create the ECS complain 'service.version' field.
-// Version of the service the data was collected from. This allows to look
-// at a data set only for a specific version of a service.
-func (nsService) Version(value string) fld.Field {
-	return ecsString("service.version", value)
-}
-
 // ## source fields
 
-// Domain create the ECS complain 'source.domain' field.
-// Source domain.
-func (nsSource) Domain(value string) fld.Field {
-	return ecsString("source.domain", value)
+// MAC create the ECS complain 'source.mac' field.
+// MAC address of the source.
+func (nsSource) MAC(value string) fld.Field {
+	return ecsString("source.mac", value)
 }
 
 // Address create the ECS complain 'source.address' field.
@@ -1406,10 +1410,28 @@ func (nsSource) Address(value string) fld.Field {
 	return ecsString("source.address", value)
 }
 
+// Domain create the ECS complain 'source.domain' field.
+// Source domain.
+func (nsSource) Domain(value string) fld.Field {
+	return ecsString("source.domain", value)
+}
+
 // Bytes create the ECS complain 'source.bytes' field.
 // Bytes sent from the source to the destination.
 func (nsSource) Bytes(value int64) fld.Field {
 	return ecsInt64("source.bytes", value)
+}
+
+// Packets create the ECS complain 'source.packets' field.
+// Packets sent from the source to the destination.
+func (nsSource) Packets(value int64) fld.Field {
+	return ecsInt64("source.packets", value)
+}
+
+// Port create the ECS complain 'source.port' field.
+// Port of the source.
+func (nsSource) Port(value int64) fld.Field {
+	return ecsInt64("source.port", value)
 }
 
 // IP create the ECS complain 'source.ip' field.
@@ -1419,31 +1441,7 @@ func (nsSource) IP(value string) fld.Field {
 	return ecsString("source.ip", value)
 }
 
-// Port create the ECS complain 'source.port' field.
-// Port of the source.
-func (nsSource) Port(value int64) fld.Field {
-	return ecsInt64("source.port", value)
-}
-
-// Packets create the ECS complain 'source.packets' field.
-// Packets sent from the source to the destination.
-func (nsSource) Packets(value int64) fld.Field {
-	return ecsInt64("source.packets", value)
-}
-
-// MAC create the ECS complain 'source.mac' field.
-// MAC address of the source.
-func (nsSource) MAC(value string) fld.Field {
-	return ecsString("source.mac", value)
-}
-
 // ## url fields
-
-// Path create the ECS complain 'url.path' field.
-// Path of the request, such as "/search".
-func (nsURL) Path(value string) fld.Field {
-	return ecsString("url.path", value)
-}
 
 // Query create the ECS complain 'url.query' field.
 // The query field describes the query string of the request, such as
@@ -1455,9 +1453,15 @@ func (nsURL) Query(value string) fld.Field {
 	return ecsString("url.query", value)
 }
 
+// Port create the ECS complain 'url.port' field.
+// Port of the request, such as 443.
+func (nsURL) Port(value int64) fld.Field {
+	return ecsInt64("url.port", value)
+}
+
 // Domain create the ECS complain 'url.domain' field.
-// Domain of the request, such as "www.elastic.co". In some cases a URL
-// may refer to an IP and/or port directly, without a domain name. In this
+// Domain of the url, such as "www.elastic.co". In some cases a URL may
+// refer to an IP and/or port directly, without a domain name. In this
 // case, the IP address would go to the `domain` field.
 func (nsURL) Domain(value string) fld.Field {
 	return ecsString("url.domain", value)
@@ -1477,6 +1481,25 @@ func (nsURL) Username(value string) fld.Field {
 	return ecsString("url.username", value)
 }
 
+// Password create the ECS complain 'url.password' field.
+// Password of the request.
+func (nsURL) Password(value string) fld.Field {
+	return ecsString("url.password", value)
+}
+
+// Scheme create the ECS complain 'url.scheme' field.
+// Scheme of the request, such as "https". Note: The `:` is not part of
+// the scheme.
+func (nsURL) Scheme(value string) fld.Field {
+	return ecsString("url.scheme", value)
+}
+
+// Path create the ECS complain 'url.path' field.
+// Path of the request, such as "/search".
+func (nsURL) Path(value string) fld.Field {
+	return ecsString("url.path", value)
+}
+
 // Original create the ECS complain 'url.original' field.
 // Unmodified original url as seen in the event source. Note that in
 // network monitoring, the observed URL may be a full URL, whereas in
@@ -1493,44 +1516,26 @@ func (nsURL) Fragment(value string) fld.Field {
 	return ecsString("url.fragment", value)
 }
 
-// Port create the ECS complain 'url.port' field.
-// Port of the request, such as 443.
-func (nsURL) Port(value int) fld.Field {
-	return ecsInt("url.port", value)
-}
-
-// Scheme create the ECS complain 'url.scheme' field.
-// Scheme of the request, such as "https". Note: The `:` is not part of
-// the scheme.
-func (nsURL) Scheme(value string) fld.Field {
-	return ecsString("url.scheme", value)
-}
-
-// Password create the ECS complain 'url.password' field.
-// Password of the request.
-func (nsURL) Password(value string) fld.Field {
-	return ecsString("url.password", value)
-}
-
 // ## user fields
 
-// Group create the ECS complain 'user.group' field.
-// Group the user is a part of. This field can contain a list of groups,
-// if necessary.
-func (nsUser) Group(value string) fld.Field {
-	return ecsString("user.group", value)
+// Name create the ECS complain 'user.name' field.
+// Short name or login of the user.
+func (nsUser) Name(value string) fld.Field {
+	return ecsString("user.name", value)
+}
+
+// Hash create the ECS complain 'user.hash' field.
+// Unique user hash to correlate information for a user in anonymized
+// form. Useful if `user.id` or `user.name` contain confidential
+// information and cannot be used.
+func (nsUser) Hash(value string) fld.Field {
+	return ecsString("user.hash", value)
 }
 
 // Email create the ECS complain 'user.email' field.
 // User email address.
 func (nsUser) Email(value string) fld.Field {
 	return ecsString("user.email", value)
-}
-
-// Name create the ECS complain 'user.name' field.
-// Short name or login of the user.
-func (nsUser) Name(value string) fld.Field {
-	return ecsString("user.name", value)
 }
 
 // FullName create the ECS complain 'user.full_name' field.
@@ -1545,26 +1550,18 @@ func (nsUser) ID(value string) fld.Field {
 	return ecsString("user.id", value)
 }
 
-// Hash create the ECS complain 'user.hash' field.
-// Unique user hash to correlate information for a user in anonymized
-// form. Useful if `user.id` or `user.name` contain confidential
-// information and cannot be used.
-func (nsUser) Hash(value string) fld.Field {
-	return ecsString("user.hash", value)
-}
-
 // ## user_agent fields
-
-// Version create the ECS complain 'user_agent.version' field.
-// Version of the user agent.
-func (nsUserAgent) Version(value string) fld.Field {
-	return ecsString("user_agent.version", value)
-}
 
 // Original create the ECS complain 'user_agent.original' field.
 // Unparsed version of the user_agent.
 func (nsUserAgent) Original(value string) fld.Field {
 	return ecsString("user_agent.original", value)
+}
+
+// Version create the ECS complain 'user_agent.version' field.
+// Version of the user agent.
+func (nsUserAgent) Version(value string) fld.Field {
+	return ecsString("user_agent.version", value)
 }
 
 // Name create the ECS complain 'user_agent.name' field.

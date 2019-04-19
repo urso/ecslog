@@ -1,3 +1,5 @@
 package ecs
 
-//go:generate go run internal/cmd/genfields/main.go -out schema.go -fmt -version 1.0.0-beta -schema $GOPATH/src/github.com/elastic/ecs/schemas
+//go:generate -command genfields go run $GOPATH/src/github.com/urso/ecslog/cmd/genfields/main.go
+
+//go:generate genfields -out schema.go -fmt -version 1.0.0 -schema $GOPATH/src/github.com/elastic/ecs/schemas
