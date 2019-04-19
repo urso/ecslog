@@ -175,16 +175,15 @@ top-down, while linking contexts of error values from the bottom upwards.
 
 ### Capturing Format strings
 
-The logging methods `Trace`, `Debug`, `Info`, `Error` always assume a format
-string is given. There are no alternative definitions not accepting a format
-string as first parameter. The intend of these methods is to create readable
+The logging methods `Tracef`, `Debugf`, `Infof`, `Errorf` require a format
+string as first argument. The intend of these methods is to create readable
 and explanatory message.
 
-The format strings supported are similar to the fmt.Printf family, but add
+The format strings supported are mostly similar to the fmt.Printf family, but add
 support for capturing additional user fields in the current log context:
 
 ```
-	log.Error("Can not open '%{file}'.", "file.txt")
+	log.Errorf("Can not open '%{file}'.", "file.txt")
 ```
 
 produces this document:
@@ -216,13 +215,13 @@ without context capturing will just print:
 Standardized fields can also be passed to a format string via:
 
 ```
-	log.Error("Failed to access %v", ecs.File.Path("test.txt"))
+	log.Errorf("Failed to access %v", ecs.File.Path("test.txt"))
 ```
 
 or:
 
 ```
-	log.Error("Failed to access '%{file}'", ecs.File.Path("test.txt"))
+	log.Errorf("Failed to access '%{file}'", ecs.File.Path("test.txt"))
 ```
 
 Both calls produce the document:
