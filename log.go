@@ -2,6 +2,7 @@ package ecslog
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/urso/ecslog/backend"
 	"github.com/urso/ecslog/ctxtree"
@@ -61,39 +62,86 @@ func (l *Logger) WithFields(fields ...fld.Field) *Logger {
 	return nl
 }
 
-func (l *Logger) Trace(msg string, args ...interface{}) {
-	l.log(Trace, 1, msg, args)
-}
+func (l *Logger) Trace(args ...interface{})              { l.log(Trace, 1, args) }
+func (l *Logger) Tracef(msg string, args ...interface{}) { l.logf(Trace, 1, msg, args) }
 
-func (l *Logger) Debug(msg string, args ...interface{}) {
-	l.log(Debug, 1, msg, args)
-}
+func (l *Logger) Debug(args ...interface{})              { l.log(Debug, 1, args) }
+func (l *Logger) Debugf(msg string, args ...interface{}) { l.logf(Debug, 1, msg, args) }
 
-func (l *Logger) Info(msg string, args ...interface{}) {
-	l.log(Info, 1, msg, args)
-}
+func (l *Logger) Info(args ...interface{})              { l.log(Info, 1, args) }
+func (l *Logger) Infof(msg string, args ...interface{}) { l.logf(Info, 1, msg, args) }
 
-func (l *Logger) Error(msg string, args ...interface{}) {
-	l.log(Error, 1, msg, args)
-}
+func (l *Logger) Error(args ...interface{})              { l.log(Error, 1, args) }
+func (l *Logger) Errorf(msg string, args ...interface{}) { l.logf(Error, 1, msg, args) }
 
-func (l *Logger) log(lvl Level, skip int, msg string, args []interface{}) {
+func (l *Logger) log(lvl Level, skip int, args []interface{}) {
 	if !l.IsEnabled(lvl) {
 		return
 	}
 
 	if l.backend.UseContext() {
-		l.logMsgCtx(lvl, skip+1, msg, args)
+		l.logArgsCtx(lvl, skip+1, args)
 	} else {
-		l.logMsg(lvl, skip+1, msg, args)
+		l.logArgs(lvl, skip+1, args)
 	}
 }
 
-func (l *Logger) logMsgCtx(lvl Level, skip int, msg string, args []interface{}) {
-	ctx := ctxtree.Make(&l.ctx, nil)
-	var causes0 [1]error
-	causes := causes0[:0]
+func (l *Logger) logf(lvl Level, skip int, msg string, args []interface{}) {
+	if !l.IsEnabled(lvl) {
+		return
+	}
 
+	if l.backend.UseContext() {
+		l.logfMsgCtx(lvl, skip+1, msg, args)
+	} else {
+		l.logfMsg(lvl, skip+1, msg, args)
+	}
+}
+
+func (l *Logger) logArgsCtx(lvl Level, skip int, args []interface{}) {
+	msg := argsMessage(args)
+	ctx := ctxtree.Make(&l.ctx, nil)
+
+	var causes []error
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case fld.Field:
+			ctx.AddField(v)
+		case error:
+			causes = append(causes, v)
+		}
+	}
+
+	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctx, causes)
+}
+
+func (l *Logger) logArgs(lvl Level, skip int, args []interface{}) {
+	msg := argsMessage(args)
+
+	var causes []error
+	for _, arg := range args {
+		if err, ok := arg.(error); ok {
+			causes = append(causes, err)
+		}
+	}
+	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+}
+
+func argsMessage(args []interface{}) string {
+	if len(args) == 0 {
+		return ""
+	}
+	if len(args) == 1 {
+		if str, ok := args[0].(string); ok {
+			return str
+		}
+	}
+	return fmt.Sprint(args...)
+}
+
+func (l *Logger) logfMsgCtx(lvl Level, skip int, msg string, args []interface{}) {
+	ctx := ctxtree.Make(&l.ctx, nil)
+	var causes []error
 	msg, rest := fld.Format(func(key string, idx int, val interface{}) {
 		if field, ok := (val).(fld.Field); ok {
 			if key != "" {
@@ -121,20 +169,11 @@ func (l *Logger) logMsgCtx(lvl Level, skip int, msg string, args []interface{}) 
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(l.name, lvl, backend.GetCaller(skip+1), msg, ctx, causes)
+	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctx, causes)
 }
 
-func ensureKey(key string, idx int) string {
-	if key == "" {
-		return fmt.Sprintf("%v", idx)
-	}
-	return key
-}
-
-func (l *Logger) logMsg(lvl Level, skip int, msg string, args []interface{}) {
-	var causes0 [1]error
-	causes := causes0[:0]
-
+func (l *Logger) logfMsg(lvl Level, skip int, msg string, args []interface{}) {
+	var causes []error
 	msg, rest := fld.Format(func(key string, idx int, val interface{}) {
 		if err, ok := val.(error); ok {
 			causes = append(causes, err)
@@ -145,5 +184,16 @@ func (l *Logger) logMsg(lvl Level, skip int, msg string, args []interface{}) {
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(l.name, lvl, backend.GetCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+}
+
+func ensureKey(key string, idx int) string {
+	if key == "" {
+		return strconv.FormatInt(int64(idx), 10)
+	}
+	return key
+}
+
+func getCaller(skip int) backend.Caller {
+	return backend.GetCaller(skip + 1)
 }
