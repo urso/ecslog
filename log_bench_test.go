@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/urso/ecslog/backend"
-	"github.com/urso/ecslog/ctxtree"
 )
 
 type benchBackend struct {
@@ -73,7 +72,7 @@ func rngASCIIString(len func(*rand.Rand) int) func(*rand.Rand) string {
 	}
 }
 
-func (bb *benchBackend) For(_ string) backend.Backend                                                { return bb }
-func (bb *benchBackend) IsEnabled(_ backend.Level) bool                                              { return !bb.Disabled }
-func (bb *benchBackend) UseContext() bool                                                            { return bb.Context }
-func (bb *benchBackend) Log(_ string, _ Level, _ backend.Caller, _ string, _ ctxtree.Ctx, _ []error) {}
+func (bb *benchBackend) For(_ string) backend.Backend   { return bb }
+func (bb *benchBackend) IsEnabled(_ backend.Level) bool { return !bb.Disabled }
+func (bb *benchBackend) UseContext() bool               { return bb.Context }
+func (bb *benchBackend) Log(backend.Message)            {}

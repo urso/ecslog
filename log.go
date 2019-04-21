@@ -112,7 +112,14 @@ func (l *Logger) logArgsCtx(lvl Level, skip int, args []interface{}) {
 		}
 	}
 
-	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctx, causes)
+	l.backend.Log(backend.Message{
+		Name:    l.name,
+		Level:   lvl,
+		Caller:  getCaller(skip + 1),
+		Message: msg,
+		Context: ctx,
+		Causes:  causes,
+	})
 }
 
 func (l *Logger) logArgs(lvl Level, skip int, args []interface{}) {
@@ -124,7 +131,14 @@ func (l *Logger) logArgs(lvl Level, skip int, args []interface{}) {
 			causes = append(causes, err)
 		}
 	}
-	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+	l.backend.Log(backend.Message{
+		Name:    l.name,
+		Level:   lvl,
+		Caller:  getCaller(skip + 1),
+		Message: msg,
+		Context: ctxtree.Make(nil, nil),
+		Causes:  causes,
+	})
 }
 
 func argsMessage(args []interface{}) string {
@@ -169,7 +183,14 @@ func (l *Logger) logfMsgCtx(lvl Level, skip int, msg string, args []interface{})
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctx, causes)
+	l.backend.Log(backend.Message{
+		Name:    l.name,
+		Level:   lvl,
+		Caller:  getCaller(skip + 1),
+		Message: msg,
+		Context: ctx,
+		Causes:  causes,
+	})
 }
 
 func (l *Logger) logfMsg(lvl Level, skip int, msg string, args []interface{}) {
@@ -184,7 +205,14 @@ func (l *Logger) logfMsg(lvl Level, skip int, msg string, args []interface{}) {
 		msg = fmt.Sprintf("%s {EXTRA_FIELDS: %v}", msg, rest)
 	}
 
-	l.backend.Log(l.name, lvl, getCaller(skip+1), msg, ctxtree.Make(nil, nil), causes)
+	l.backend.Log(backend.Message{
+		Name:    l.name,
+		Level:   lvl,
+		Caller:  getCaller(skip + 1),
+		Message: msg,
+		Context: ctxtree.Make(nil, nil),
+		Causes:  causes,
+	})
 }
 
 func ensureKey(key string, idx int) string {

@@ -8,14 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/urso/ecslog"
 	"github.com/urso/ecslog/backend"
-	"github.com/urso/ecslog/backend/enclog"
-	"github.com/urso/ecslog/backend/jsonlog"
-	"github.com/urso/ecslog/backend/objlog"
-	"github.com/urso/ecslog/backend/structlog"
-	"github.com/urso/ecslog/backend/txtlog"
+	"github.com/urso/ecslog/backend/appender"
+	"github.com/urso/ecslog/backend/layout"
 	"github.com/urso/ecslog/errx"
 	"github.com/urso/ecslog/fld"
 	"github.com/urso/ecslog/fld/ecs"
@@ -28,36 +24,18 @@ func main() {
 
 	modes := map[string]func(){
 		"text": func() {
-			testWith("text message only", ecslog.New(
-				txtlog.NewTextBackend(txtlog.Writer(os.Stdout, backend.Trace, false))))
+			testWith(appender.Console(backend.Trace, layout.Text(false)))
 		},
 		"verbose": func() {
-			testWith("text message only", ecslog.New(
-				txtlog.NewTextBackend(txtlog.Writer(os.Stdout, backend.Trace, true))))
+			testWith(appender.Console(backend.Trace, layout.Text(true)))
 		},
 		"json": func() {
-			json, err := jsonlog.New(enclog.Writer(os.Stdout, backend.Trace, "\n"), []fld.Field{
-				structlog.DynTimestamp(time.RFC3339Nano),
-			})
-			if err != nil {
-				panic(err)
-			}
-			testWith("", ecslog.New(json))
-		},
-		"obj": func() {
-			backend, err := objlog.New(
-				objlog.Call(backend.Trace, func(obj map[string]interface{}) {
-					spew.Dump(obj)
+			testWith(appender.Console(
+				backend.Trace,
+				layout.JSON([]fld.Field{
+					layout.DynTimestamp(time.RFC3339Nano),
 				}),
-				[]fld.Field{
-					structlog.DynTimestamp(time.RFC3339Nano),
-				},
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			testWith("obj", ecslog.New(backend))
+			))
 		},
 	}
 
@@ -70,11 +48,14 @@ func main() {
 	fn()
 }
 
-func testWith(title string, log *ecslog.Logger) {
-	if title != "" {
-		printTitle(title)
-	}
+func testWith(backend backend.Backend, err error) {
 	defer fmt.Println()
+
+	if err != nil {
+		panic(err)
+	}
+
+	log := ecslog.New(backend)
 
 	log.Trace("trace message")
 	log.Debug("debug message")
