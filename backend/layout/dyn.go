@@ -1,4 +1,4 @@
-package structlog
+package layout
 
 import (
 	"time"

@@ -1,6 +1,8 @@
 package backend
 
-import "github.com/urso/ecslog/ctxtree"
+import (
+	"github.com/urso/ecslog/ctxtree"
+)
 
 type Backend interface {
 	For(name string) Backend
@@ -8,10 +10,19 @@ type Backend interface {
 	IsEnabled(lvl Level) bool
 	UseContext() bool
 
-	Log(name string, lvl Level, caller Caller, msg string, ctx ctxtree.Ctx, causes []error)
+	Log(Message)
 }
 
 type Level uint8
+
+type Message struct {
+	Name    string
+	Level   Level
+	Caller  Caller
+	Message string
+	Context ctxtree.Ctx
+	Causes  []error
+}
 
 const (
 	Trace Level = iota
