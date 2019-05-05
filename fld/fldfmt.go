@@ -181,6 +181,7 @@ func (p *printer) writeArg(arg interface{}, verb byte) {
 		default:
 			p.writeBadVerb(verb)
 		}
+		return
 	}
 
 	// Type and pointer are special. Let's treat them first
@@ -249,7 +250,7 @@ func (p *printer) writeValue(v reflect.Value, verb byte, depth int) {
 	case reflect.Invalid:
 		switch {
 		case depth == 0:
-			p.WriteString("<invalid reflect.Value")
+			p.WriteString("<invalid reflect.Value>")
 		case verb == 'v':
 			p.WriteString("<nil>")
 		default:
@@ -415,7 +416,7 @@ func (p *printer) writeValue(v reflect.Value, verb byte, depth int) {
 func (p *printer) handleMethods(v reflect.Value, verb byte) bool {
 	flags := &p.state.flags
 
-	if p.state.inError || !v.CanInterface() || !v.IsValid() {
+	if p.state.inError || !v.IsValid() || !v.CanInterface() {
 		return false
 	}
 
