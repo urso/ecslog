@@ -11,6 +11,7 @@ import (
 	"github.com/urso/ecslog"
 	"github.com/urso/ecslog/backend"
 	"github.com/urso/ecslog/backend/appender"
+	"github.com/urso/ecslog/backend/appender/rolling"
 	"github.com/urso/ecslog/backend/layout"
 	"github.com/urso/ecslog/errx"
 	"github.com/urso/ecslog/fld"
@@ -24,17 +25,32 @@ func main() {
 
 	modes := map[string]func(){
 		"text": func() {
-			testWith(appender.Console(backend.Trace, layout.Text(false)))
+			testWith(appender.Console(ecslog.Trace, layout.Text(false)))
 		},
 		"verbose": func() {
-			testWith(appender.Console(backend.Trace, layout.Text(true)))
+			testWith(appender.Console(ecslog.Trace, layout.Text(true)))
 		},
 		"json": func() {
 			testWith(appender.Console(
-				backend.Trace,
+				ecslog.Trace,
 				layout.JSON([]fld.Field{
 					layout.DynTimestamp(time.RFC3339Nano),
 				}),
+			))
+		},
+		"json_file": func() {
+			testWith(rolling.NewRollingFile(
+				ecslog.Trace,
+				layout.JSON([]fld.Field{
+					layout.DynTimestamp(time.RFC3339Nano),
+				}),
+				rolling.SizeTrigger(256), // rollover after 256 bytes
+				rolling.RolloverStrategy{
+					FileName:   "test.log",
+					MaxBackups: 3,
+					Compressed: 2,
+					MaxAge:     1 * time.Minute,
+				}.Build,
 			))
 		},
 	}
