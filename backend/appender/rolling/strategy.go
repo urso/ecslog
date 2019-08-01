@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type strategyFactory func(FileStater) Strategy
+type strategyFactory func(*Background, FileStater) Strategy
 
 type Strategy interface {
 	Rotate(FileInfo) (syncAction, asyncAction)
@@ -49,7 +49,7 @@ type RotateStrategy struct {
 
 // Build creates the rollver Strategy to be used with the rolling log file
 // appender.
-func (s RotateStrategy) Build(st FileStater) Strategy {
+func (s RotateStrategy) Build(_ *Background, st FileStater) Strategy {
 	s.stater = st
 
 	s.logFileName = s.FileName

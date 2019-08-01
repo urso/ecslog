@@ -4,7 +4,7 @@ import (
 	"github.com/urso/ecslog/backend"
 )
 
-type triggerFactory func(Rotator, FileStater) Trigger
+type triggerFactory func(*Background, Rotator, FileStater) Trigger
 
 // Trigger interface is implemented by the different trigger types.
 // Triggers are allowed to trigger a file rollover at any time.
@@ -36,10 +36,10 @@ func (f triggerFunc) CheckTrigger(evt backend.Message, stat FileInfo) bool {
 }
 
 func ComposeTriggers(factories ...triggerFactory) triggerFactory {
-	return func(r Rotator, stat FileStater) Trigger {
+	return func(b *Background, r Rotator, stat FileStater) Trigger {
 		ct := &compositeTrigger{r: r}
 		for _, f := range factories {
-			t := f(ct, stat)
+			t := f(b, ct, stat)
 			if t != nil {
 				ct.triggers = append(ct.triggers, t)
 			}
@@ -84,14 +84,14 @@ func CronTrigger(config string) triggerFactory {
 
 // StartTrigger triggers a log file rollover right on startup.
 func StartTrigger() triggerFactory {
-	return func(r Rotator, _ FileStater) Trigger {
+	return func(_ *Background, r Rotator, _ FileStater) Trigger {
 		r.Rotate()
 		return nil
 	}
 }
 
 func makeSyncTrigger(fn func(backend.Message, FileInfo) bool) triggerFactory {
-	return func(_ Rotator, _ FileStater) Trigger {
+	return func(_ *Background, _ Rotator, _ FileStater) Trigger {
 		return triggerFunc(func(evt backend.Message, stat FileInfo) bool {
 			return fn(evt, stat)
 		})
