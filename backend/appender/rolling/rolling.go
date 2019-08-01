@@ -175,7 +175,7 @@ func (a *Appender) execRotate() error {
 		return nil
 	}
 
-	a.wg.Wait()
+	a.wg.Wait() // wait for rotation from last run to finish
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()

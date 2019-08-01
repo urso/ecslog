@@ -1,6 +1,8 @@
 package rolling
 
 import (
+	"time"
+
 	"github.com/urso/ecslog/backend"
 )
 
@@ -74,12 +76,41 @@ func SizeTrigger(maxSize uint64) triggerFactory {
 	})
 }
 
-// CronTrigger asynchronously triggers a rollover at a preconfigured interval.
-func CronTrigger(config string) triggerFactory {
-	panic("TODO")
+// TimeTrigger creates a background trigger, that triggers rotation based on the
+// timestamps returned by next.
+func TimeTrigger(next func() time.Time) triggerFactory {
+	return func(b *Background, r Rotator, _ FileStater) Trigger {
+		b.Go(func() {
+			for {
+				dur := time.Now().Sub(next())
+				if dur < 0 {
+					if b.Err() != nil {
+						return
+					}
+					r.Rotate()
+					continue
+				}
 
-	// see heartbeat/scheduler/scheduler.go for cron like
-	// -> start go-routine to trigger rollover by time.
+				select {
+				case <-b.Done():
+					return
+				case <-time.After(dur):
+					r.Rotate()
+				}
+			}
+		})
+		return nil
+	}
+}
+
+// Periodical trigger create a background trigger, that triggers rotation
+// within a set interval.
+func PeriodicTrigger(interval time.Duration) triggerFactory {
+	ts := time.Now()
+	return TimeTrigger(func() time.Time {
+		ts = ts.Add(interval)
+		return ts
+	})
 }
 
 // StartTrigger triggers a log file rollover right on startup.
