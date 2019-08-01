@@ -24,7 +24,7 @@ type structLayout struct {
 	fields      *ctxtree.Ctx
 	makeEncoder func(io.Writer) structform.Visitor
 	types       *gotype.Iterator
-	typeOpts    []gotype.Option
+	typeOpts    []gotype.FoldOption
 	visitor     structform.Visitor
 }
 
@@ -49,19 +49,19 @@ type multiErr struct {
 	errs []error
 }
 
-func JSON(fields []fld.Field, opts ...gotype.Option) Factory {
+func JSON(fields []fld.Field, opts ...gotype.FoldOption) Factory {
 	return Structured(func(w io.Writer) structform.Visitor {
 		return json.NewVisitor(w)
 	}, fields, opts...)
 }
 
-func UBJSON(fields []fld.Field, opts ...gotype.Option) Factory {
+func UBJSON(fields []fld.Field, opts ...gotype.FoldOption) Factory {
 	return Structured(func(w io.Writer) structform.Visitor {
 		return ubjson.NewVisitor(w)
 	}, fields, opts...)
 }
 
-func CBOR(fields []fld.Field, opts ...gotype.Option) Factory {
+func CBOR(fields []fld.Field, opts ...gotype.FoldOption) Factory {
 	return Structured(func(w io.Writer) structform.Visitor {
 		return cborl.NewVisitor(w)
 	}, fields, opts...)
@@ -70,7 +70,7 @@ func CBOR(fields []fld.Field, opts ...gotype.Option) Factory {
 func Structured(
 	makeEncoder func(io.Writer) structform.Visitor,
 	fields []fld.Field,
-	opts ...gotype.Option,
+	opts ...gotype.FoldOption,
 ) Factory {
 	return func(out io.Writer) (Layout, error) {
 		logCtx := ctxtree.New(nil, nil)
