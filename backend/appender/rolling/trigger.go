@@ -4,7 +4,7 @@ import (
 	"github.com/urso/ecslog/backend"
 )
 
-type triggerFactory func(Rolloverer, FileStater) Trigger
+type triggerFactory func(Rotator, FileStater) Trigger
 
 // Trigger interface is implemented by the different trigger types.
 // Triggers are allowed to trigger a file rollover at any time.
@@ -21,13 +21,13 @@ type Trigger interface {
 // When the composite trigger signals a rollover, any trigger implementing
 // TriggerListener will be called, allowing it to reset state.
 type TriggerListener interface {
-	RolloverTriggered()
+	RotationTriggered()
 }
 
 type triggerFunc func(backend.Message, FileInfo) bool
 
 type compositeTrigger struct {
-	r        Rolloverer
+	r        Rotator
 	triggers []Trigger
 }
 
@@ -36,7 +36,7 @@ func (f triggerFunc) CheckTrigger(evt backend.Message, stat FileInfo) bool {
 }
 
 func ComposeTriggers(factories ...triggerFactory) triggerFactory {
-	return func(r Rolloverer, stat FileStater) Trigger {
+	return func(r Rotator, stat FileStater) Trigger {
 		ct := &compositeTrigger{r: r}
 		for _, f := range factories {
 			t := f(ct, stat)
@@ -48,14 +48,14 @@ func ComposeTriggers(factories ...triggerFactory) triggerFactory {
 	}
 }
 
-func (t *compositeTrigger) Rollover() error {
+func (t *compositeTrigger) Rotate() error {
 	for _, trigger := range t.triggers {
 		if tl, ok := trigger.(TriggerListener); ok {
-			tl.RolloverTriggered()
+			tl.RotationTriggered()
 		}
 	}
 
-	return t.r.Rollover()
+	return t.r.Rotate()
 }
 
 func (t *compositeTrigger) CheckTrigger(evt backend.Message, stat FileInfo) bool {
@@ -84,14 +84,14 @@ func CronTrigger(config string) triggerFactory {
 
 // StartTrigger triggers a log file rollover right on startup.
 func StartTrigger() triggerFactory {
-	return func(r Rolloverer, _ FileStater) Trigger {
-		r.Rollover()
+	return func(r Rotator, _ FileStater) Trigger {
+		r.Rotate()
 		return nil
 	}
 }
 
 func makeSyncTrigger(fn func(backend.Message, FileInfo) bool) triggerFactory {
-	return func(_ Rolloverer, _ FileStater) Trigger {
+	return func(_ Rotator, _ FileStater) Trigger {
 		return triggerFunc(func(evt backend.Message, stat FileInfo) bool {
 			return fn(evt, stat)
 		})

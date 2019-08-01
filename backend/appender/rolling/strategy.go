@@ -10,24 +10,24 @@ import (
 type strategyFactory func(FileStater) Strategy
 
 type Strategy interface {
-	Rollover(FileInfo) (syncAction, asyncAction)
+	Rotate(FileInfo) (syncAction, asyncAction)
 }
 
 type syncAction func(FileInfo) (*os.File, error)
 
 type asyncAction func(FileStater, FileInfo) error
 
-// RolloverStrategy implements the default rollover strategy.
+// RotateStrategy implements the default rollover strategy.
 // On rollover the timestamp is added to the log file name. For example
 // the log file /path/to/file.log will be renamed to /path/to/file-2019-05-01T20:00:00.000.log.
 //
-// Adding timestamps simplifies the asynchronous processing of old logs. RolloverStrategy always
+// Adding timestamps simplifies the asynchronous processing of old logs. RotateStrategy always
 // rotates the current log file first. If compression is enabled, then the file will be asynchronously compressed
 // in a second step.
 // This process also reduces the chance of conflicts with concurrently running
 // file collectors keeping log files open, basically blocking the log producing
 // application on some OSes (e.g. Windows).
-type RolloverStrategy struct {
+type RotateStrategy struct {
 	// FileName is the file name to actively write logs to.
 	FileName    string
 	logFileName string // file name without extension
@@ -49,7 +49,7 @@ type RolloverStrategy struct {
 
 // Build creates the rollver Strategy to be used with the rolling log file
 // appender.
-func (s RolloverStrategy) Build(st FileStater) Strategy {
+func (s RotateStrategy) Build(st FileStater) Strategy {
 	s.stater = st
 
 	s.logFileName = s.FileName
@@ -60,9 +60,9 @@ func (s RolloverStrategy) Build(st FileStater) Strategy {
 	return &s
 }
 
-// Rollover creates the concrete rollover strategy to be executed by the file
+// Rotate creates the concrete rotation strategy to be executed by the file
 // manager.
-func (s *RolloverStrategy) Rollover(stat FileInfo) (syncAction, asyncAction) {
+func (s *RotateStrategy) Rotate(stat FileInfo) (syncAction, asyncAction) {
 	newPath := s.rolloverName()
 
 	sync := func(_ FileInfo) (*os.File, error) {
@@ -90,7 +90,7 @@ func (s *RolloverStrategy) Rollover(stat FileInfo) (syncAction, asyncAction) {
 }
 
 // rolloverName creates the new log file name to be used upon rollover.
-func (s *RolloverStrategy) rolloverName() string {
+func (s *RotateStrategy) rolloverName() string {
 	ts := time.Now().Format("2006-01-02T15:04:05.000")
 	path := fmt.Sprintf("%v-%v", s.logFileName, ts)
 	if s.extension != "" {

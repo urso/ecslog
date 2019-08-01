@@ -28,11 +28,11 @@ type rolling struct {
 }
 
 // Rolloverer is used by the trigger to start the rollover process.
-type Rolloverer interface {
-	Rollover() error
+type Rotator interface {
+	Rotate() error
 }
 
-var _ Rolloverer = (*rolling)(nil)
+var _ Rotator = (*rolling)(nil)
 var _ FileStater = (*rolling)(nil)
 
 var ErrNoFile = errors.New("No log file open")
@@ -74,7 +74,7 @@ func NewRollingFile(
 	// If the log file is empty, no rollover will occur on the second rollover signal.
 	r.trigger = triggerFactory(r, r)
 
-	err = r.Rollover()
+	err = r.Rotate()
 	return r, err
 }
 
@@ -100,7 +100,7 @@ func (r *rolling) Log(msg backend.Message) {
 	}
 }
 
-func (r *rolling) Rollover() error {
+func (r *rolling) Rotate() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.execRollover()
@@ -119,7 +119,7 @@ func (r *rolling) execRollover() error {
 	stat := r.stat
 	r.stat = FileInfo{}
 
-	sync, async := r.strategy.Rollover(stat)
+	sync, async := r.strategy.Rotate(stat)
 	file, err := sync(stat)
 	if err != nil {
 		return err
