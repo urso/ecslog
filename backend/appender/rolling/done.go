@@ -1,6 +1,9 @@
 package rolling
 
-import "sync"
+import (
+	"os"
+	"sync"
+)
 
 // Background is used to track background go routine started by triggers
 // and strategies. On shutdown go routines are signaled via Done and Err.
@@ -55,4 +58,45 @@ func (b *Background) Go(fn func()) {
 		defer b.Finished()
 		fn()
 	}()
+}
+
+// fileCloser connects a file to a Background. If the background signals shutdown,
+// then the file will be cosed immediately.
+type fileCloser struct {
+	b *Background
+	f *os.File
+
+	closeOnce sync.Once
+	err       error
+	done      chan struct{}
+}
+
+func newFileCloser(b *Background, f *os.File) *fileCloser {
+	c := &fileCloser{
+		b:    b,
+		f:    f,
+		done: make(chan struct{}),
+	}
+
+	go func() {
+		select {
+		case <-b.Done():
+			c.Close()
+		case <-c.done:
+		}
+	}()
+
+	return c
+}
+
+func (c *fileCloser) Done() error {
+	close(c.done)
+	return c.Close()
+}
+
+func (c *fileCloser) Close() error {
+	c.closeOnce.Do(func() {
+		c.err = c.f.Close()
+	})
+	return c.err
 }

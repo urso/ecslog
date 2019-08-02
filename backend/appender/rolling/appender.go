@@ -28,7 +28,7 @@ type Appender struct {
 	stat FileInfo
 }
 
-// Rolloverer is used by the trigger to start the rotate process.
+// Rotator is used by the trigger to start the rotate process.
 type Rotator interface {
 	Rotate() error
 }
