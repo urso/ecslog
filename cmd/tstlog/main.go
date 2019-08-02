@@ -39,17 +39,22 @@ func main() {
 			))
 		},
 		"json_file": func() {
-			testWith(rolling.NewRollingFile(
+			testWith(rolling.NewAppender(
 				ecslog.Trace,
 				layout.JSON([]fld.Field{
 					layout.DynTimestamp(time.RFC3339Nano),
 				}),
-				rolling.SizeTrigger(256), // rollover after 256 bytes
-				rolling.RolloverStrategy{
-					FileName:   "test.log",
-					MaxBackups: 3,
-					Compressed: 2,
-					MaxAge:     1 * time.Minute,
+				rolling.ComposeTriggers(
+					rolling.StartTrigger(),
+					rolling.SizeTrigger(1024), // rollover after 256 bytes
+					rolling.PeriodicTrigger(1*time.Second),
+				),
+				rolling.RotateStrategy{
+					FileName:    "test.log",
+					MaxBackups:  8,
+					Compressed:  4,
+					Compression: &rolling.CompressGZip{Level: 4},
+					MaxAge:      1 * time.Minute,
 				}.Build,
 			))
 		},

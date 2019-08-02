@@ -36,6 +36,8 @@ type Rotator interface {
 var _ Rotator = (*Appender)(nil)
 var _ FileStater = (*Appender)(nil)
 
+var newline = []byte("\n")
+
 // FileStater is used by the trigger and strategy to query the state of the
 // current active log file.
 type FileStater interface {
@@ -201,5 +203,8 @@ func (a *Appender) Write(b []byte) (int, error) {
 
 	n, err := a.file.Write(b)
 	a.stat.Size += uint64(n)
+	if err == nil {
+		a.file.Write(newline)
+	}
 	return n, err
 }

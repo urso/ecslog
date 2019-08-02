@@ -24,7 +24,7 @@ type asyncAction func(FileStater, FileInfo) error
 
 // RotateStrategy implements the default rollover strategy.
 // On rollover the timestamp is added to the log file name. For example
-// the log file /path/to/file.log will be renamed to /path/to/file-2019-05-01T20:00:00.000.log.
+// the log file /path/to/file.log will be renamed to /path/to/file_2019_05_01T20_00_00.000.log.
 //
 // Adding timestamps simplifies the asynchronous processing of old logs. RotateStrategy always
 // rotates the current log file first. If compression is enabled, then the file will be asynchronously compressed
@@ -64,12 +64,13 @@ type backupFileInfo struct {
 	compressed bool
 }
 
-const timestampFormat = "2006-01-02T15:04:05.000"
+const timestampFormat = "2006_01_02T15_04_05.000000"
 
 // Build creates the rollver Strategy to be used with the rolling log file
 // appender.
 func (s RotateStrategy) Build(b *Background, st FileStater) Strategy {
 	s.stater = st
+	s.background = b
 
 	if s.Compression == nil {
 		s.Compressed = 0
@@ -78,7 +79,8 @@ func (s RotateStrategy) Build(b *Background, st FileStater) Strategy {
 	s.logFileName = s.FileName
 	s.extension = filepath.Ext(s.FileName)
 	if s.extension != "" {
-		s.logFileName = s.logFileName[:len(s.logFileName)-len(s.extension)-1]
+		s.logFileName = s.logFileName[:len(s.logFileName)-len(s.extension)]
+		s.extension = extNorm(s.extension)
 	}
 
 	if s.Permission == 0 {
@@ -216,7 +218,7 @@ func (s *RotateStrategy) oldLogs() ([]backupFileInfo, error) {
 	ext := s.fileExtension()
 	extCompressed := s.compressedExtension()
 
-	files, err := filepath.Glob(fmt.Sprintf("%v-*", s.FileName))
+	files, err := filepath.Glob(fmt.Sprintf("%v_*", s.logFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -225,22 +227,21 @@ func (s *RotateStrategy) oldLogs() ([]backupFileInfo, error) {
 	for _, path := range files {
 		fullPath := path
 
-		if !strings.HasPrefix(s.FileName, path) {
+		if !strings.HasPrefix(path, s.logFileName) {
 			continue
 		}
-		path = path[len(s.FileName)+1:] // remove <filename>- from path
+		path = path[len(s.logFileName)+1:] // remove <filename>_ from path
 
-		compressed := extCompressed != "" && strings.HasSuffix(ext, path)
+		compressed := extCompressed != "" && strings.HasSuffix(path, extCompressed)
 		if compressed {
 			path = path[:len(path)-len(extCompressed)] // remove filename extension for compressed files
 		}
 
-		if ext != "" && !strings.HasSuffix(ext, path) {
+		if ext != "" && !strings.HasSuffix(path, ext) {
 			continue
 		}
-
-		candidate := path[len(s.FileName) : len(path)-len(ext)]
-		ts, err := time.Parse(timestampFormat, candidate)
+		path = path[:len(path)-len(ext)]
+		ts, err := time.Parse(timestampFormat, path)
 		if err != nil {
 			continue
 		}
@@ -262,15 +263,15 @@ func (s *RotateStrategy) oldLogs() ([]backupFileInfo, error) {
 // rolloverName creates the new log file name to be used upon rollover.
 func (s *RotateStrategy) rolloverName() string {
 	ts := time.Now().Format(timestampFormat)
-	path := fmt.Sprintf("%v-%v", s.logFileName, ts)
+	path := fmt.Sprintf("%v_%v", s.logFileName, ts)
 	if s.extension != "" {
-		path = fmt.Sprintf("%v.%v", path, s.extension)
+		path += s.extension
 	}
 	return path
 }
 
 func (s *RotateStrategy) fileExtension() string {
-	return extNorm(s.extension)
+	return s.extension
 }
 
 func (s *RotateStrategy) compressedExtension() string {
