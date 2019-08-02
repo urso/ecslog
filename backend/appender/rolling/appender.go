@@ -205,6 +205,7 @@ func (a *Appender) Write(b []byte) (int, error) {
 	a.stat.Size += uint64(n)
 	if err == nil {
 		a.file.Write(newline)
+		a.stat.Size++
 	}
 	return n, err
 }
