@@ -108,11 +108,17 @@ func newPrinter(cb CB) *printer {
 }
 
 func (p *printer) init(cb CB) {
-	p.buf = p.buf0[:0]
+	if p.buf == nil {
+		p.buf = p.buf0[:0]
+	}
 }
 
 func (p *printer) release() {
-	p.buf = nil
+	if cap(p.buf) > (32 << 10) {
+		return
+	}
+
+	p.buf = p.buf[:0]
 	p.state = state{}
 	printerPool.Put(p)
 }
