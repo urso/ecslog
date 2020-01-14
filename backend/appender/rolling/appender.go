@@ -50,6 +50,13 @@ type FileInfo struct {
 	Created time.Time
 }
 
+// appenderWriter provides the Write operation required by the Layout instance.
+// It is used so to not Export an unsafe Write operation in the public API of
+// Appender.
+type appenderWriter Appender
+
+// NewAppender creates a new rolling file appender based on the configured
+// layout, triggers, and rolling strategy.
 func NewAppender(
 	lvl backend.Level,
 	layout layout.Factory,
@@ -63,7 +70,7 @@ func NewAppender(
 		},
 	}
 
-	l, err := layout(a)
+	l, err := layout((*appenderWriter)(a))
 	if err != nil {
 		return nil, err
 	}
@@ -193,9 +200,12 @@ func (a *Appender) FileStat() FileInfo {
 	return a.stat
 }
 
-func (a *Appender) Write(b []byte) (int, error) {
+// Write is only used by the configured layout to write the serialized log
+// event to the appender. It is indirectly called via the (*Appender).Log
+// method, which will also acquire the required mutex.
+func (a *appenderWriter) Write(b []byte) (int, error) {
 	if a.file == nil {
-		err := a.execRotate() // retry rotation, hoping we can open a file now
+		err := a.appender().execRotate() // retry rotation, hoping we can open a file now
 		if err != nil {
 			return 0, err
 		}
@@ -208,4 +218,8 @@ func (a *Appender) Write(b []byte) (int, error) {
 		a.stat.Size++
 	}
 	return n, err
+}
+
+func (a *appenderWriter) appender() *Appender {
+	return (*Appender)(a)
 }
