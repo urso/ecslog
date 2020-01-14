@@ -11,6 +11,7 @@ import (
 	"github.com/urso/ecslog"
 	"github.com/urso/ecslog/backend"
 	"github.com/urso/ecslog/backend/appender"
+	"github.com/urso/ecslog/backend/appender/rolling"
 	"github.com/urso/ecslog/backend/layout"
 	"github.com/urso/ecslog/errx"
 	"github.com/urso/ecslog/fld"
@@ -24,17 +25,37 @@ func main() {
 
 	modes := map[string]func(){
 		"text": func() {
-			testWith(appender.Console(backend.Trace, layout.Text(false)))
+			testWith(appender.Console(ecslog.Trace, layout.Text(false)))
 		},
 		"verbose": func() {
-			testWith(appender.Console(backend.Trace, layout.Text(true)))
+			testWith(appender.Console(ecslog.Trace, layout.Text(true)))
 		},
 		"json": func() {
 			testWith(appender.Console(
-				backend.Trace,
+				ecslog.Trace,
 				layout.JSON([]fld.Field{
 					layout.DynTimestamp(time.RFC3339Nano),
 				}),
+			))
+		},
+		"json_file": func() {
+			testWith(rolling.NewAppender(
+				ecslog.Trace,
+				layout.JSON([]fld.Field{
+					layout.DynTimestamp(time.RFC3339Nano),
+				}),
+				rolling.ComposeTriggers(
+					rolling.StartTrigger(),
+					rolling.SizeTrigger(1024), // rollover after 256 bytes
+					rolling.PeriodicTrigger(1*time.Second),
+				),
+				rolling.RotateStrategy{
+					FileName:    "test.log",
+					MaxBackups:  8,
+					Compressed:  4,
+					Compression: &rolling.CompressGZip{Level: 4},
+					MaxAge:      1 * time.Minute,
+				}.Build,
 			))
 		},
 	}
