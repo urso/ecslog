@@ -59,6 +59,8 @@ github.com/urso/sderr v0.0.0-20200210115749-5d311cd31803 h1:RYGgCUSEAtZIm9sBXag/
 github.com/urso/sderr v0.0.0-20200210115749-5d311cd31803/go.mod h1:Mp7g3iltlbxKabpZGPpmgnk5gYJIdqTW0jUaPLIoTTU=
 github.com/urso/sderr v0.0.0-20200210123314-7bfa1f17eeb6 h1:uDmhlHE0cdQqCgUzvq77jz6g+BsqbhJwcKiZ0sXckBg=
 github.com/urso/sderr v0.0.0-20200210123314-7bfa1f17eeb6/go.mod h1:Wp40HwmjM59FkDIVFfcCb9LzBbnc0XAMp8++hJuWvSU=
+github.com/urso/sderr v0.0.0-20200210124243-c2a16f3d43ec h1:HkZIDJrMKZHPsYhmH2XjTTSk1pbMCFfpxSnyzZUFm+k=
+github.com/urso/sderr v0.0.0-20200210124243-c2a16f3d43ec/go.mod h1:Wp40HwmjM59FkDIVFfcCb9LzBbnc0XAMp8++hJuWvSU=
 github.com/xanzy/ssh-agent v0.2.1 h1:TCbipTQL2JiiCprBWx9frJ2eJlCYT00NmctrHxVAr70=
 github.com/xanzy/ssh-agent v0.2.1/go.mod h1:mLlQY/MoOhWBj+gOGMQkOeiEvkx+8pJSI+0Bx9h2kr4=
 golang.org/x/crypto v0.0.0-20190219172222-a4c6cb3142f2/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
