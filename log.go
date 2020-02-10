@@ -7,6 +7,7 @@
 package ecslog
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -66,6 +67,31 @@ func (l *Logger) WithFields(fields ...diag.Field) *Logger {
 	}
 	nl.ctx.AddFields(fields...)
 	return nl
+}
+
+func (l *Logger) WithDiagnosticContext(ctx *diag.Context) *Logger {
+	if ctx.Len() == 0 {
+		return l.With()
+	}
+
+	var merged *diag.Context
+	if l.ctx.Len() == 0 {
+		merged = ctx
+	} else {
+		merged = diag.NewContext(l.ctx, ctx)
+	}
+	return &Logger{
+		ctx:     diag.NewContext(merged, nil),
+		backend: l.backend,
+	}
+}
+
+func (l *Logger) WithDiagnotics(ctx context.Context) *Logger {
+	dc, _ := diag.DiagnosticsFrom(ctx)
+	if dc.Len() == 0 {
+		return l.With()
+	}
+	return l.WithDiagnosticContext(dc)
 }
 
 func (l *Logger) Trace(args ...interface{})              { l.log(Trace, 1, args) }
