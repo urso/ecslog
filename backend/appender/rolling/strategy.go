@@ -1,3 +1,9 @@
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+
 package rolling
 
 import (
@@ -9,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/urso/ecslog/errx"
+	"github.com/urso/sderr"
 )
 
 type strategyFactory func(*Background, FileStater) Strategy
@@ -125,12 +131,12 @@ func (s *RotateStrategy) syncStep(stat FileInfo) (*os.File, error) {
 func (s *RotateStrategy) asyncStep(_ FileStater, _ FileInfo) error {
 	backups, err := s.oldLogs()
 	if err != nil {
-		return errx.Wrap(err, "failed to query old files")
+		return sderr.Wrap(err, "failed to query old files")
 	}
 
 	backups, err = s.removeOld(backups)
 	if err != nil {
-		return errx.Wrap(err, "failed to remove old files")
+		return sderr.Wrap(err, "failed to remove old files")
 	}
 
 	uncompressed := s.MaxBackups - s.Compressed

@@ -1,3 +1,9 @@
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+
 package main
 
 import (
@@ -8,14 +14,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/urso/diag"
+	"github.com/urso/diag-ecs/ecs"
 	"github.com/urso/ecslog"
 	"github.com/urso/ecslog/backend"
 	"github.com/urso/ecslog/backend/appender"
 	"github.com/urso/ecslog/backend/appender/rolling"
 	"github.com/urso/ecslog/backend/layout"
-	"github.com/urso/ecslog/errx"
-	"github.com/urso/ecslog/fld"
-	"github.com/urso/ecslog/fld/ecs"
+	"github.com/urso/sderr"
 )
 
 func main() {
@@ -33,7 +39,7 @@ func main() {
 		"json": func() {
 			testWith(appender.Console(
 				ecslog.Trace,
-				layout.JSON([]fld.Field{
+				layout.JSON([]diag.Field{
 					layout.DynTimestamp(time.RFC3339Nano),
 				}),
 			))
@@ -41,7 +47,7 @@ func main() {
 		"json_file": func() {
 			testWith(rolling.NewAppender(
 				ecslog.Trace,
-				layout.JSON([]fld.Field{
+				layout.JSON([]diag.Field{
 					layout.DynTimestamp(time.RFC3339Nano),
 				}),
 				rolling.ComposeTriggers(
@@ -104,28 +110,28 @@ func testWith(backend backend.Backend, err error) {
 
 	log.Errorf("log error value: %{reason}", errors.New("oops"))
 
-	log.Errorf("log errx formatted: %{reason}",
-		errx.Errf("ooops with %{extra}", "value"))
+	log.Errorf("log sderr formatted: %{reason}",
+		sderr.Errf("ooops with %{extra}", "value"))
 
-	log.Errorf("log errx formatted with user field: %{reason}",
-		errx.With("field", 1).Errf("ooops with %{extra}", "value"))
+	log.Errorf("log sderr formatted with user field: %{reason}",
+		sderr.With("field", 1).Errf("ooops with %{extra}", "value"))
 
-	log.Errorf("log errx formatted with ecs field: %{reason}",
-		errx.With(ecs.Host.Hostname("localhost")).Errf("ooops with %{extra}", "value"))
+	log.Errorf("log sderr formatted with ecs field: %{reason}",
+		sderr.With(ecs.Host.Hostname("localhost")).Errf("ooops with %{extra}", "value"))
 
-	log.Errorf("log errx verbose formatted: %{+reason}",
-		errx.Errf("ooops with %{extra}", "value"))
+	log.Errorf("log sderr verbose formatted: %{+reason}",
+		sderr.Errf("ooops with %{extra}", "value"))
 
 	log.Errorf("wrap EOF error with location: %v",
-		errx.Wrap(io.EOF, "failed to read %{file}", "file.txt"))
+		sderr.Wrap(io.EOF, "failed to read %{file}", "file.txt"))
 
 	log.Errorf("wrap EOF twice: %v",
-		errx.Wrap(
-			errx.Wrap(io.EOF, "unepxected end of file in %{file}", "file.txt"),
+		sderr.Wrap(
+			sderr.Wrap(io.EOF, "unepxected end of file in %{file}", "file.txt"),
 			"error reading files in %{dir}", "path/to/files"))
 
 	log.Errorf("wrap EOF with Errf: %v",
-		errx.Errf("failed to read %{file}", "file.txt", io.EOF))
+		sderr.Errf("failed to read %{file}", "file.txt", io.EOF))
 
 	log.With(
 		ecs.Service.Name("my server"),
@@ -138,7 +144,7 @@ func testWith(backend backend.Backend, err error) {
 		ecs.Source.Domain("localhost"),
 		ecs.Source.IP("127.0.0.1"),
 	).Errorf("wrap unexpected EOF with additional fields: %v",
-		errx.With(
+		sderr.With(
 			ecs.File.Path("file.txt"),
 			ecs.File.Extension("txt"),
 			ecs.File.Owner("me"),
@@ -147,26 +153,26 @@ func testWith(backend backend.Backend, err error) {
 	log.With(
 		"test", "field",
 	).Errorf("Can not open keystore: %{error}",
-		errx.With("op", "db/open").Wrap(
-			errx.With("op", "db/init").Wrap(io.EOF,
+		sderr.With("op", "db/open").Wrap(
+			sderr.With("op", "db/init").Wrap(io.EOF,
 				"failed to read db header in %{file}", "dbname/file.db"),
 			"can not open database %{database}", "dbname"))
 
 	log.Errorf("many errors: %v",
-		errx.WrapAll([]error{
+		sderr.WrapAll([]error{
 			io.EOF,
 			io.ErrClosedPipe,
 		}, "init operation failed"))
 
 	log.Errorf("wrapped many errors tree: %v",
-		errx.WrapAll([]error{
-			errx.Wrap(io.EOF, "unexpected eof in %{file}", "tx.log"),
-			errx.Wrap(io.ErrClosedPipe, "remote connection to %{server} closed", "localhost"),
+		sderr.WrapAll([]error{
+			sderr.Wrap(io.EOF, "unexpected eof in %{file}", "tx.log"),
+			sderr.Wrap(io.ErrClosedPipe, "remote connection to %{server} closed", "localhost"),
 		}, "init operation failed"))
 
 	log.Errorf("multiple errors: %v || %v",
-		errx.Wrap(io.EOF, "unexpected eof in %{file}", "tx.log"),
-		errx.Wrap(io.ErrClosedPipe, "remote connection to %{server} closed", "localhost"),
+		sderr.Wrap(io.EOF, "unexpected eof in %{file}", "tx.log"),
+		sderr.Wrap(io.ErrClosedPipe, "remote connection to %{server} closed", "localhost"),
 	)
 }
 
